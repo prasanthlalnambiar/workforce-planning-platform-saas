@@ -73,3 +73,13 @@ test('Layer 1 immutable payload guards allow only controlled status movement', (
   assert.match(sql, /protect_layer1_handoff_update/);
   assert.match(sql, /locked calculation references cannot be changed/i);
 });
+
+
+test('Phase 2 Layer 1 engine fields are added to scaffolding tables', () => {
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS demand_category text NOT NULL DEFAULT 'measured_contact'/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS work_type_label text/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS current_supply_fte numeric\(12,2\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS annual_budget_target numeric\(18,2\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS risk_flags_json jsonb/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS scenario_summary_json jsonb/);
+});

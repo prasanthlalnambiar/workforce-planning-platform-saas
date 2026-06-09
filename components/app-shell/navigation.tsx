@@ -4,7 +4,7 @@ const navItems = [
   ['Workspace', '/workspace', 'Phase 1'],
   ['Fiscal Years', '/fiscal-years', 'Phase 1'],
   ['Dimensions', '/dimensions', 'Phase 1'],
-  ['Layer 1 Demand Engine', '/layer1', 'Phase 2/3'],
+  ['Layer 1 Demand Engine', '/layer1', 'Phase 2'],
   ['Budget Baseline', '/baseline', 'Phase 4'],
   ['Drivers', '/drivers', 'Phase 5'],
   ['Reforecast', '/reforecast', 'Phase 6'],
