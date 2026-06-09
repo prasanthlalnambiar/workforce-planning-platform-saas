@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { createPlan } from '../lib/repositories/plans';
 import { createFiscalYearWithPeriods } from '../lib/repositories/fiscal-years';
-import { createDimension, type DimensionTable } from '../lib/repositories/dimensions';
+import { createDimension } from '../lib/repositories/dimensions';
+import { isDimensionTable } from '../lib/repositories/dimension-tables';
 import { requireUserContext } from '../lib/auth/session';
 
 export async function createPlanAction(formData: FormData) {
@@ -27,11 +28,15 @@ export async function createFiscalYearAction(formData: FormData) {
 
 export async function createDimensionAction(formData: FormData) {
   const context = await requireUserContext();
-  const table = String(formData.get('dimension_table')) as DimensionTable;
+  const tableValue = String(formData.get('dimension_table') ?? '');
+  if (!isDimensionTable(tableValue)) {
+    throw new Error('Invalid dimension table');
+  }
+
   const values: Record<string, unknown> = {};
   for (const [key, value] of formData.entries()) {
     if (key !== 'dimension_table') values[key] = value;
   }
-  await createDimension(context, table, values);
+  await createDimension(context, tableValue, values);
   revalidatePath('/dimensions');
 }

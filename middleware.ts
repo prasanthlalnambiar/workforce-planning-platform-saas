@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { updateSession } from './lib/supabase/middleware';
 
 const protectedPrefixes = [
   '/workspace',
@@ -18,11 +17,10 @@ const protectedPrefixes = [
   '/onboarding'
 ];
 
-export async function middleware(request: NextRequest) {
-  const response = await updateSession(request);
+export function middleware(request: NextRequest) {
   const isProtected = protectedPrefixes.some((prefix) => request.nextUrl.pathname.startsWith(prefix));
 
-  if (!isProtected) return response;
+  if (!isProtected) return NextResponse.next();
 
   const hasSupabaseCookies = request.cookies.getAll().some((cookie) => cookie.name.startsWith('sb-'));
   if (!hasSupabaseCookies) {
@@ -32,7 +30,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {

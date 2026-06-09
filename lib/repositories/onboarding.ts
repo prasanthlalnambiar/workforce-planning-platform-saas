@@ -1,3 +1,4 @@
+import 'server-only';
 import { insertAuditEvent } from '../audit/audit-service';
 import { roleDefinitions } from '../permissions/roles';
 import { createAdminClient } from '../supabase/admin';

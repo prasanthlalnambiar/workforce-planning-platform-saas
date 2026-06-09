@@ -1,5 +1,7 @@
 'use server';
 
+import 'server-only';
+
 import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser } from '../../lib/auth/session';
 import { bootstrapFirstOrganisation } from '../../lib/repositories/onboarding';

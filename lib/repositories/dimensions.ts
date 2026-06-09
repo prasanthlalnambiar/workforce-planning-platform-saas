@@ -2,8 +2,8 @@ import { insertAuditEvent } from '../audit/audit-service';
 import { requirePermission } from '../permissions/permissions';
 import { createClient } from '../supabase/server';
 import type { UserContext } from '../../types/models';
-
-export type DimensionTable = 'regions' | 'locations' | 'channels' | 'work_types' | 'workforce_groups';
+import type { DimensionTable } from './dimension-tables';
+export type { DimensionTable } from './dimension-tables';
 
 export async function listDimension(context: UserContext, table: DimensionTable) {
   const supabase = await createClient();
