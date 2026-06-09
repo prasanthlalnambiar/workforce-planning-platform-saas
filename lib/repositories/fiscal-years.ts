@@ -73,7 +73,7 @@ export async function createFiscalYearWithPeriods(
   const { error: periodsError } = await supabase.from('planning_periods').insert(periodDrafts);
   if (periodsError) throw periodsError;
 
-  await insertAuditEvent(supabase, {
+  await insertAuditEvent({
     organisationId: context.organisationId,
     actorUserId: context.userId,
     eventType: 'fiscal_year.created',

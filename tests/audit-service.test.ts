@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildAuditEvent } from '../lib/audit/audit-service.ts';
+import { buildAuditEvent } from '../lib/audit/audit-service';
 
 test('builds organisation-scoped audit payload', () => {
   const event = buildAuditEvent({

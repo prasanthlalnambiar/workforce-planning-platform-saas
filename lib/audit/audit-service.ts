@@ -1,3 +1,4 @@
+import { createAdminClient } from '../supabase/admin';
 import type { AuditEventInput, AuditEventInsert } from '../../types/models';
 
 export function buildAuditEvent(input: AuditEventInput): AuditEventInsert {
@@ -24,11 +25,9 @@ export function buildAuditEvent(input: AuditEventInput): AuditEventInsert {
   };
 }
 
-export async function insertAuditEvent(
-  supabase: { from: (table: string) => { insert: (payload: AuditEventInsert) => Promise<{ error: Error | null }> } },
-  input: AuditEventInput
-): Promise<void> {
+export async function insertAuditEvent(input: AuditEventInput): Promise<void> {
   const payload = buildAuditEvent(input);
-  const { error } = await supabase.from('audit_events').insert(payload);
+  const supabase = createAdminClient();
+  const { error } = await supabase.from('audit_events').insert([payload]);
   if (error) throw error;
 }

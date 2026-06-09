@@ -30,7 +30,7 @@ export async function createPlan(context: UserContext, input: { planName: string
   const { data, error } = await supabase.from('plans').insert(planInsert).select('id').single();
   if (error) throw error;
 
-  await insertAuditEvent(supabase, {
+  await insertAuditEvent({
     organisationId: context.organisationId,
     actorUserId: context.userId,
     eventType: 'plan.created',

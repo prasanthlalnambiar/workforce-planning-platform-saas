@@ -31,7 +31,7 @@ button, input, textarea, select { font: inherit; }
 .content { width: min(1280px, calc(100% - 48px)); margin: 0 auto; padding: 30px 0 70px; }
 .stack { display: grid; gap: 20px; }
 .header, .card { padding: 24px; border: 1px solid var(--line); border-radius: 24px; background: rgba(255,253,249,.94); box-shadow: var(--shadow); }
-.header { display: flex; justify-content: space-between; align-items: start; gap: 20px; padding: 28px; border-radius: 28px; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding: 28px; border-radius: 28px; }
 .eyebrow { margin: 0 0 10px; color: var(--warm); font-size: .74rem; font-weight: 850; letter-spacing: .15em; text-transform: uppercase; }
 h1, h2, h3 { margin: 0; font-family: var(--serif); font-weight: 500; letter-spacing: -.04em; line-height: 1.08; }
 h1 { font-size: clamp(2.2rem, 4vw, 4.2rem); } h2 { font-size: clamp(1.45rem, 2.1vw, 2.1rem); }
@@ -50,3 +50,4 @@ th, td { padding: 13px 14px; border-bottom: 1px solid #ebe4da; text-align: left;
 .login-shell { min-height: 100vh; display: grid; place-items: center; padding: 28px; } .login-card { width: min(560px, 100%); }
 .placeholder { border-left: 5px solid var(--warm); }
 @media (max-width: 980px) { .layout, .grid-2, .grid-4, .form-grid { grid-template-columns: 1fr; } .sidebar { min-height: auto; } .nav { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+.small-note { font-size: .88rem; color: var(--muted); }

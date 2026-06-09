@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateMonthlyPlanningPeriods } from '../lib/services/planning-periods.ts';
+import { generateMonthlyPlanningPeriods } from '../lib/services/planning-periods';
 
 test('generates 12 monthly planning periods for a fiscal year', () => {
   const periods = generateMonthlyPlanningPeriods({

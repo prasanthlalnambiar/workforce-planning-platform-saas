@@ -25,7 +25,7 @@ export async function createDimension(context: UserContext, table: DimensionTabl
   };
   const { data, error } = await supabase.from(table).insert(insertPayload).select('id').single();
   if (error) throw error;
-  await insertAuditEvent(supabase, {
+  await insertAuditEvent({
     organisationId: context.organisationId,
     actorUserId: context.userId,
     eventType: `dimension.${table}.created`,

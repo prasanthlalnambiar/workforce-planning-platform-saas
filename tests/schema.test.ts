@@ -1,8 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
-const sql = readFileSync(new URL('../supabase/migrations/001_phase1_foundation.sql', import.meta.url), 'utf8');
+const migrationsDir = new URL('../supabase/migrations', import.meta.url);
+const sql = readdirSync(migrationsDir)
+  .filter((file) => file.endsWith('.sql'))
+  .sort()
+  .map((file) => readFileSync(join(migrationsDir.pathname, file), 'utf8'))
+  .join('\n');
 
 const businessTables = [
   'organisation_memberships',
@@ -47,7 +53,23 @@ test('Layer 1 scaffolding and lock/handoff tables exist', () => {
   }
 });
 
-test('no service role key is referenced in browser-facing code by migration', () => {
-  assert.equal(sql.includes('SERVICE_ROLE'), false);
-  assert.equal(sql.includes('service_role'), false);
+test('direct audit event inserts are removed by the hardening migration', () => {
+  const createIndex = sql.indexOf('CREATE POLICY audit_events_insert_member');
+  const dropIndex = sql.indexOf('DROP POLICY IF EXISTS audit_events_insert_member ON public.audit_events;');
+  assert.notEqual(createIndex, -1, 'initial migration should show the policy being superseded');
+  assert.notEqual(dropIndex, -1, 'hardening migration must drop the direct insert policy');
+  assert.ok(dropIndex > createIndex, 'drop must happen after the initial policy creation');
+  assert.match(sql, /REVOKE INSERT, UPDATE, DELETE ON public\.audit_events FROM anon, authenticated;/);
+});
+
+test('tenant consistency guardrails include composite organisation foreign keys', () => {
+  assert.match(sql, /FOREIGN KEY \(organisation_id, plan_id\) REFERENCES public\.plans\(organisation_id, id\)/);
+  assert.match(sql, /FOREIGN KEY \(organisation_id, period_id\) REFERENCES public\.planning_periods\(organisation_id, id\)/);
+  assert.match(sql, /FOREIGN KEY \(organisation_id, work_type_id\) REFERENCES public\.work_types\(organisation_id, id\)/);
+});
+
+test('Layer 1 immutable payload guards allow only controlled status movement', () => {
+  assert.match(sql, /protect_layer1_version_lock_update/);
+  assert.match(sql, /protect_layer1_handoff_update/);
+  assert.match(sql, /locked calculation references cannot be changed/i);
 });

@@ -1,5 +1,5 @@
 import type { Permission, RoleName } from '../../types/roles';
-import { roleDefinitions } from './roles.ts';
+import { roleDefinitions } from './roles';
 
 const permissionByRole = new Map(roleDefinitions.map((role) => [role.name, role.permissions]));
 

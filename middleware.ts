@@ -14,7 +14,8 @@ const protectedPrefixes = [
   '/variance',
   '/waterfall',
   '/ai',
-  '/settings'
+  '/settings',
+  '/onboarding'
 ];
 
 export async function middleware(request: NextRequest) {

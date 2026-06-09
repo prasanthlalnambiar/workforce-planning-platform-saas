@@ -13,6 +13,30 @@ interface RoleRow {
   roles?: { role_name?: string } | null;
 }
 
+export interface AuthenticatedUser {
+  id: string;
+  email: string;
+  fullName: string | null;
+}
+
+export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> {
+  const supabase = await createClient();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) return null;
+
+  return {
+    id: userData.user.id,
+    email: userData.user.email ?? '',
+    fullName: (userData.user.user_metadata?.full_name as string | undefined) ?? (userData.user.user_metadata?.name as string | undefined) ?? null
+  };
+}
+
+export async function requireAuthenticatedUser(): Promise<AuthenticatedUser> {
+  const user = await getAuthenticatedUser();
+  if (!user) redirect('/login');
+  return user;
+}
+
 export async function getCurrentUserContext(): Promise<UserContext | null> {
   const supabase = await createClient();
   const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -54,7 +78,10 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
 }
 
 export async function requireUserContext(): Promise<UserContext> {
+  const user = await getAuthenticatedUser();
+  if (!user) redirect('/login');
+
   const context = await getCurrentUserContext();
-  if (!context) redirect('/login');
+  if (!context) redirect('/onboarding');
   return context;
 }

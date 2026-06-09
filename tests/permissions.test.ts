@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hasPermission, requirePermission } from '../lib/permissions/permissions.ts';
+import { hasPermission, requirePermission } from '../lib/permissions/permissions';
 
 test('owner has broad foundation permissions', () => {
   assert.equal(hasPermission(['owner'], 'workspace:create_plan'), true);

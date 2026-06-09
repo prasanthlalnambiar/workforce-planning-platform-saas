@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertTenantMatch, filterTenantRows } from '../lib/tenant/tenant-scope.ts';
+import { assertTenantMatch, filterTenantRows } from '../lib/tenant/tenant-scope';
 
 test('filters records by organisation id', () => {
   const rows = [
