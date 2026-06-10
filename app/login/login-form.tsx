@@ -20,7 +20,7 @@ export function LoginForm() {
       setMessage(error.message);
       return;
     }
-    router.push(searchParams.get('redirectedFrom') || '/workspace');
+    router.push(searchParams?.get('redirectedFrom') || '/workspace');
     router.refresh();
   }
 
