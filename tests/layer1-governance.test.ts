@@ -7,8 +7,7 @@ import {
   canLockLayer1,
   canSubmitLayer1,
   checksumLayer1Snapshot,
-  deriveAssumptionRiskLevel,
-  nextLayer1VersionId
+  deriveAssumptionRiskLevel
 } from '../lib/layer1/governance';
 import { buildAuditEvent } from '../lib/audit/audit-payload';
 
@@ -117,11 +116,6 @@ test('governance helper derives assumption risk level from risk flags and confid
   assert.equal(deriveAssumptionRiskLevel([{ severity: 'medium' }], 80), 'medium');
   assert.equal(deriveAssumptionRiskLevel([{ severity: 'high' }], 80), 'high');
   assert.equal(deriveAssumptionRiskLevel([], 45), 'high');
-});
-
-test('version IDs increment predictably', () => {
-  assert.equal(nextLayer1VersionId(0), 'L1-V001');
-  assert.equal(nextLayer1VersionId(9), 'L1-V010');
 });
 
 test('Layer 1 governance audit events preserve actor, entity and reason', () => {

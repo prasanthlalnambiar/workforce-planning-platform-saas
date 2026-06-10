@@ -77,6 +77,19 @@ Phase 3 converts the Layer 1 engine from a calculator into a governed planning i
 - database immutability guards for governed calculation runs, version locks and handoff payloads
 - audit events for submit, approval request, approval, lock, handoff creation and handoff readiness
 
+### Implemented in Phase 3.1
+
+Phase 3.1 hardens Layer 1 governance before Layer 2 depends on it:
+
+- atomic database RPC for Layer 1 version lock and handoff creation
+- transaction-safe supersede, lock, calculation-run update and handoff creation
+- database-backed, plan-scoped Layer 1 version ID generation
+- plan/version uniqueness guard for `version_id`
+- advisory transaction lock to protect concurrent Layer 1 lock creation
+- controlled database function for handoff status transitions such as `ready_for_layer2`
+- database-level permission checks for lock and handoff transitions
+- audit events written inside the governance database transaction
+
 ### Not implemented yet
 
 The following are deliberately not built yet:
@@ -188,6 +201,7 @@ supabase/migrations/001_phase1_foundation.sql
 supabase/migrations/002_phase1_1_hardening.sql
 supabase/migrations/003_phase2_layer1_engine_fields.sql
 supabase/migrations/004_phase3_layer1_approval_lock_handoff.sql
+supabase/migrations/005_phase3_1_layer1_governance_hardening.sql
 ```
 
 The migrations create and harden:
@@ -201,6 +215,7 @@ The migrations create and harden:
 - tenant-consistency foreign key guardrails
 - Layer 1 Phase 2 calculation support fields
 - Layer 1 Phase 3 approval, lock, snapshot and handoff support
+- Layer 1 Phase 3.1 transaction-safe lock/handoff RPC and controlled handoff transitions
 
 ## Local development
 

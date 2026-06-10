@@ -75,6 +75,20 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      create_layer1_lock_and_handoff: {
+        Args: {
+          target_organisation_id: string;
+          target_plan_id: string;
+          target_calculation_run_id: string;
+          target_actor_user_id: string;
+          target_fiscal_year_id: string | null;
+          approved_snapshot: Json;
+          handoff_payload: Json;
+          target_checksum: string;
+          lock_reason?: string | null;
+        };
+        Returns: Array<{ version_lock: Json; handoff: Json }>;
+      };
       transition_layer1_version_lock_status: {
         Args: {
           target_organisation_id: string;
@@ -83,6 +97,17 @@ export interface Database {
           transition_reason?: string | null;
         };
         Returns: void;
+      };
+      transition_layer1_handoff_status_controlled: {
+        Args: {
+          target_organisation_id: string;
+          target_plan_id: string;
+          target_handoff_id: string;
+          target_actor_user_id: string;
+          next_status: string;
+          transition_reason?: string | null;
+        };
+        Returns: Json;
       };
       transition_layer1_handoff_status: {
         Args: {

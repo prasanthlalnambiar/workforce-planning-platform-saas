@@ -11,6 +11,7 @@ import {
 } from '../layer1/calculation-engine';
 import type { Layer1ScenarioDefinition } from '../layer1/calculation-types';
 import type { UserContext } from '../../types/models';
+import type { Json } from '../../types/database';
 import {
   demandCategories,
   isDemandCategory,
@@ -28,8 +29,7 @@ import {
   canApproveLayer1,
   canLockLayer1,
   canSubmitLayer1,
-  checksumLayer1Snapshot,
-  nextLayer1VersionId
+  checksumLayer1Snapshot
 } from '../layer1/governance';
 
 export { demandCategories, isDemandCategory, isDemandFrequency, mapAssumptions, mapDemandRows };
@@ -427,60 +427,22 @@ export async function createLayer1VersionLockAndHandoff(context: UserContext, in
   const checksum = checksumLayer1Snapshot(snapshot);
   const admin = createAdminClient();
 
-  const activeLocks = data.versionLocks.filter((lock) => ['approved', 'locked'].includes(String(lock.approval_status)));
-  for (const lock of activeLocks) {
-    const { error: supersedeLockError } = await admin
-      .from('layer1_version_locks')
-      .update({ approval_status: 'superseded', change_reason: 'Superseded by a newer Layer 1 version lock' })
-      .eq('organisation_id', context.organisationId)
-      .eq('id', String(lock.id));
-    if (supersedeLockError) throw supersedeLockError;
-    await insertAuditEvent({ organisationId: context.organisationId, actorUserId: context.userId, eventType: 'layer1.version.superseded', entityType: 'layer1_version_lock', entityId: String(lock.id), planId, oldValue: { approval_status: lock.approval_status }, newValue: { approval_status: 'superseded' }, reason: 'Superseded by a newer Layer 1 version lock' });
-  }
-  for (const handoff of data.handoffs.filter((handoff) => ['approved', 'locked', 'ready_for_layer2'].includes(String(handoff.handoff_status)))) {
-    const { error: supersedeHandoffError } = await admin
-      .from('layer1_handoff_objects')
-      .update({ handoff_status: 'superseded' })
-      .eq('organisation_id', context.organisationId)
-      .eq('id', String(handoff.id));
-    if (supersedeHandoffError) throw supersedeHandoffError;
-  }
-
-  const versionPayload = {
-    organisation_id: context.organisationId,
-    plan_id: planId,
-    fiscal_year_id: fiscalYearId,
-    version_id: nextLayer1VersionId(data.versionLocks.length),
-    approved_calculation_run_id: String(run.id),
-    approval_status: 'locked',
-    approved_by: snapshot.approved_by,
-    approved_at: snapshot.approved_at,
-    locked_by: context.userId,
-    locked_at: now,
-    checksum,
-    change_reason: nullableString(input.lock_notes),
-    approved_snapshot_json: snapshot,
-    approval_notes: snapshot.approval_notes,
-    is_immutable: true
-  };
-  const { data: versionLock, error: versionError } = await admin.from('layer1_version_locks').insert(versionPayload).select('*').single();
-  if (versionError) throw versionError;
-
-  const { error: runLockError } = await admin
-    .from('calculation_runs')
-    .update({ run_status: 'locked' })
-    .eq('organisation_id', context.organisationId)
-    .eq('id', String(run.id));
-  if (runLockError) throw runLockError;
-
-  await insertAuditEvent({ organisationId: context.organisationId, actorUserId: context.userId, eventType: 'layer1.version_locked', entityType: 'layer1_version_lock', entityId: String(versionLock.id), planId, newValue: versionPayload, reason: nullableString(input.lock_notes) ?? 'Layer 1 version locked' });
-
-  const handoffPayload = buildLayer1HandoffPayload(snapshot, { versionLockId: String(versionLock.id), createdBy: context.userId, status: 'locked' });
-  const { data: handoff, error: handoffError } = await admin.from('layer1_handoff_objects').insert(handoffPayload).select('*').single();
-  if (handoffError) throw handoffError;
-
-  await insertAuditEvent({ organisationId: context.organisationId, actorUserId: context.userId, eventType: 'layer1.handoff.created', entityType: 'layer1_handoff_object', entityId: String(handoff.id), planId, newValue: handoffPayload, reason: 'Layer 1 handoff object created for future Layer 2 baseline setup' });
-  return { versionLock, handoff };
+  const handoffPayload = buildLayer1HandoffPayload(snapshot, { status: 'locked' });
+  const { data: rpcResult, error } = await admin.rpc('create_layer1_lock_and_handoff', {
+    target_organisation_id: context.organisationId,
+    target_plan_id: planId,
+    target_calculation_run_id: String(run.id),
+    target_actor_user_id: context.userId,
+    target_fiscal_year_id: fiscalYearId,
+    approved_snapshot: snapshot as unknown as Json,
+    handoff_payload: handoffPayload as Json,
+    target_checksum: checksum,
+    lock_reason: nullableString(input.lock_notes)
+  });
+  if (error) throw error;
+  const result = Array.isArray(rpcResult) ? rpcResult[0] : null;
+  if (!result) throw new Error('Layer 1 lock and handoff RPC did not return a result');
+  return { versionLock: result.version_lock, handoff: result.handoff };
 }
 
 export async function markLayer1HandoffReadyForLayer2(context: UserContext, input: Record<string, unknown>) {
@@ -489,10 +451,14 @@ export async function markLayer1HandoffReadyForLayer2(context: UserContext, inpu
   const handoffId = String(input.handoff_id ?? '');
   if (!handoffId) throw new Error('Handoff id is required');
   const admin = createAdminClient();
-  const { data: current, error: currentError } = await admin.from('layer1_handoff_objects').select('*').eq('organisation_id', context.organisationId).eq('plan_id', planId).eq('id', handoffId).single();
-  if (currentError) throw currentError;
-  const { data: updated, error } = await admin.from('layer1_handoff_objects').update({ handoff_status: 'ready_for_layer2' }).eq('organisation_id', context.organisationId).eq('plan_id', planId).eq('id', handoffId).select('*').single();
+  const { data: updated, error } = await admin.rpc('transition_layer1_handoff_status_controlled', {
+    target_organisation_id: context.organisationId,
+    target_plan_id: planId,
+    target_handoff_id: handoffId,
+    target_actor_user_id: context.userId,
+    next_status: 'ready_for_layer2',
+    transition_reason: nullableString(input.ready_notes) ?? 'Layer 1 handoff marked ready for Layer 2 baseline setup'
+  });
   if (error) throw error;
-  await insertAuditEvent({ organisationId: context.organisationId, actorUserId: context.userId, eventType: 'layer1.handoff.ready_for_layer2', entityType: 'layer1_handoff_object', entityId: handoffId, planId, oldValue: { handoff_status: current.handoff_status }, newValue: { handoff_status: 'ready_for_layer2' }, reason: nullableString(input.ready_notes) ?? 'Layer 1 handoff marked ready for Layer 2 baseline setup' });
   return updated;
 }

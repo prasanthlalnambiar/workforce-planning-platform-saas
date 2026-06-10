@@ -145,20 +145,16 @@ export function checksumLayer1Snapshot(snapshot: Layer1VersionSnapshot): string 
   return createHash('sha256').update(JSON.stringify(snapshot)).digest('hex');
 }
 
-export function nextLayer1VersionId(existingVersionCount: number): string {
-  return `L1-V${String(existingVersionCount + 1).padStart(3, '0')}`;
-}
-
 export function buildLayer1HandoffPayload(snapshot: Layer1VersionSnapshot, input: {
-  versionLockId: string;
-  createdBy: string;
+  versionLockId?: string | null;
+  createdBy?: string | null;
   status?: 'approved' | 'locked' | 'ready_for_layer2';
 }): Record<string, unknown> {
   return {
     organisation_id: snapshot.organisation_id,
     plan_id: snapshot.plan_id,
     fiscal_year_id: snapshot.fiscal_year_id,
-    version_lock_id: input.versionLockId,
+    version_lock_id: input.versionLockId ?? null,
     approved_calculation_run_id: snapshot.approved_calculation_run_id,
     handoff_status: input.status ?? 'locked',
     source_quality_score: Number(snapshot.source_quality_score ?? 0),
@@ -176,7 +172,7 @@ export function buildLayer1HandoffPayload(snapshot: Layer1VersionSnapshot, input
     source_summary_json: snapshot.source_summary,
     risk_summary_json: snapshot.risk_flags,
     annualisation_note: snapshot.annualisation_note,
-    created_by: input.createdBy,
+    created_by: input.createdBy ?? null,
     is_immutable: true
   };
 }
