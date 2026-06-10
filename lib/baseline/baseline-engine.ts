@@ -47,6 +47,19 @@ export interface BudgetBaselineSnapshotInput {
   sourceHandoff?: Record<string, unknown> | null;
   lockedBy: string;
   lockedAt: string;
+  checksum?: string | null;
+}
+
+function stripChecksumFields(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((item) => stripChecksumFields(item));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([key]) => key !== 'checksum' && key !== 'snapshot_checksum')
+        .map(([key, nested]) => [key, stripChecksumFields(nested)])
+    );
+  }
+  return value;
 }
 
 function round2(value: number): number {
@@ -145,6 +158,7 @@ export function buildBudgetBaselineSnapshot(input: BudgetBaselineSnapshotInput):
   return {
     baseline: input.baseline,
     lines: input.lines,
+    snapshot_checksum: input.checksum ?? null,
     source_layer1_handoff: input.sourceHandoff ?? null,
     annual_totals: {
       annual_budget_amount: input.baseline.annual_budget_amount ?? 0,
@@ -168,6 +182,7 @@ export function buildBudgetBaselineSnapshot(input: BudgetBaselineSnapshotInput):
       created_by: input.baseline.created_by ?? null,
       locked_by: input.lockedBy,
       locked_at: input.lockedAt,
+      checksum: input.checksum ?? input.baseline.checksum ?? null,
       source_type: input.baseline.source_type ?? null,
       source_layer1_handoff_id: input.baseline.source_layer1_handoff_id ?? null,
       source_layer1_version_lock_id: input.baseline.source_layer1_version_lock_id ?? null
@@ -182,5 +197,5 @@ export function buildBudgetBaselineSnapshot(input: BudgetBaselineSnapshotInput):
 }
 
 export function checksumBudgetBaselineSnapshot(snapshot: Record<string, unknown>): string {
-  return createHash('sha256').update(JSON.stringify(snapshot)).digest('hex');
+  return createHash('sha256').update(JSON.stringify(stripChecksumFields(snapshot))).digest('hex');
 }

@@ -64,3 +64,25 @@ External ZIPs should exclude generated files and secrets:
 - `supabase/.branches/`
 
 After extracting the ZIP, run the clean verification loop above.
+
+## Phase approval rule
+
+This build verification file is paired with `QUALITY_GATE.md`.
+
+For every future phase, run the full clean verification loop and the commercial quality gate before approving the phase or starting the next one. Do not treat a successful local development server as sufficient proof.
+
+A future phase is blocked if any of these fail:
+
+- clean install
+- tests
+- typecheck
+- lint
+- production build
+- dependency audit
+- migration verification
+- tenant isolation checks
+- role permission checks
+- governance/immutability checks
+- workflow/E2E checks
+- external ZIP testing
+

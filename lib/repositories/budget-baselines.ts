@@ -337,8 +337,30 @@ export async function lockBudgetBaseline(context: UserContext, baselineId: strin
   if (!detail.baseline) throw new Error('Budget baseline not found');
   if (!detail.reconciliation?.reconciles) throw new Error('Budget baseline does not reconcile to annual totals');
   const lockedAt = new Date().toISOString();
-  const snapshot = buildBudgetBaselineSnapshot({ baseline: detail.baseline, lines: detail.lines, sourceHandoff: detail.sourceHandoff, lockedBy: context.userId, lockedAt });
-  const checksum = checksumBudgetBaselineSnapshot(snapshot);
+  const lockedBaselineForSnapshot = {
+    ...detail.baseline,
+    status: 'locked',
+    locked_by: context.userId,
+    locked_at: lockedAt,
+    is_immutable: true,
+    checksum: null
+  };
+  const snapshotForChecksum = buildBudgetBaselineSnapshot({
+    baseline: lockedBaselineForSnapshot,
+    lines: detail.lines.map((line) => ({ ...line, is_immutable: true })),
+    sourceHandoff: detail.sourceHandoff,
+    lockedBy: context.userId,
+    lockedAt
+  });
+  const checksum = checksumBudgetBaselineSnapshot(snapshotForChecksum);
+  const finalSnapshot = buildBudgetBaselineSnapshot({
+    baseline: { ...lockedBaselineForSnapshot, checksum },
+    lines: detail.lines.map((line) => ({ ...line, is_immutable: true })),
+    sourceHandoff: detail.sourceHandoff,
+    lockedBy: context.userId,
+    lockedAt,
+    checksum
+  });
   const admin = createAdminClient();
   const { data, error } = await admin.rpc('lock_budget_baseline', {
     target_organisation_id: context.organisationId,
@@ -346,7 +368,7 @@ export async function lockBudgetBaseline(context: UserContext, baselineId: strin
     target_fiscal_year_id: String(detail.baseline.fiscal_year_id),
     target_budget_baseline_id: baselineId,
     target_actor_user_id: context.userId,
-    snapshot_payload: toJson(snapshot),
+    snapshot_payload: toJson(finalSnapshot),
     target_checksum: checksum,
     lock_reason: notes ?? 'Budget baseline locked'
   });

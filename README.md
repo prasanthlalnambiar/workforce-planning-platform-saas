@@ -113,6 +113,25 @@ Phase 4 builds the Budget Baseline Module and stops at the locked annual baselin
 Phase 4 does not build drivers, reforecasting, actuals, variance, waterfall or AI.
 
 
+
+### Implemented in Phase 4.1
+
+Phase 4.1 is a commercial QA hardening gate for the cumulative Phase 1 to Phase 4 product. It does not add Phase 5 capability.
+
+This phase adds or strengthens:
+
+- GitHub Actions quality gate
+- permanent quality-gate documentation
+- cumulative migration contract verification
+- tenant isolation contract tests
+- expanded role permission matrix tests
+- governance and immutability attack-surface tests
+- full Layer 1 to Budget Baseline workflow contract test
+- Budget Baseline locked snapshot accuracy so the immutable snapshot reflects final locked state
+- service-role-only governance boundaries for Layer 1 lock and handoff creation
+
+The current environment does not include Supabase CLI, Docker or `psql`, so Phase 4.1 uses the strongest practical SQL/repository/service contract harness available here. A live Supabase/Postgres migration reset and RLS attack test should be added before commercial pilot use.
+
 ### Build hardening after Phase 4
 
 Protected App Router pages explicitly opt into dynamic rendering with `export const dynamic = 'force-dynamic'`.
@@ -193,6 +212,7 @@ Important: if one-off work is included, Phase 2 shows it inside the selected mod
 - Locked Layer 1 snapshots and handoff payloads are immutable
 - Locked budget baseline headers, lines and snapshots are immutable
 - Phase 4 stops at locked budget baseline; drivers and reforecasting are not implemented yet
+- Phase 4.1 adds proof and hardening only; no Phase 5 features are implemented
 
 ## Tech stack
 
@@ -253,6 +273,7 @@ supabase/migrations/003_phase2_layer1_engine_fields.sql
 supabase/migrations/004_phase3_layer1_approval_lock_handoff.sql
 supabase/migrations/005_phase3_1_layer1_governance_hardening.sql
 supabase/migrations/006_phase4_budget_baseline_module.sql
+supabase/migrations/007_phase4_1_commercial_qa_hardening.sql
 ```
 
 The migrations create and harden:
