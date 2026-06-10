@@ -1,22 +1,14 @@
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 
 const file = process.argv[2] || 'build-output.log';
-const output = readFileSync(file, 'utf8');
+const result = spawnSync(process.execPath, ['scripts/inspect-routes.mjs', '--build-output', file], {
+  stdio: 'inherit',
+  shell: false
+});
 
-if (output.includes('○')) {
-  console.error('Static routes detected in production build output. This auth-gated SaaS must not emit static route rows.');
-  console.error('Failing rows/context:');
-  for (const line of output.split('\n')) {
-    if (line.includes('○')) console.error(line);
-  }
+if (result.error) {
+  console.error(`Static route guard failed to start: ${result.error.message}`);
   process.exit(1);
 }
 
-for (const required of ['ƒ /', 'ƒ /_not-found', 'ƒ /login']) {
-  if (!output.includes(required)) {
-    console.error(`Expected dynamic route marker not found in build output: ${required}`);
-    process.exit(1);
-  }
-}
-
-console.log('No static route rows detected in production build output.');
+process.exit(result.status ?? 1);

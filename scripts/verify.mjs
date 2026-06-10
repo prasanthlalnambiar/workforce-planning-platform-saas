@@ -47,7 +47,7 @@ run('Unit and contract tests', process.execPath, ['--import', 'tsx', '--test', .
 runLocalBin('TypeScript typecheck', 'tsc', ['--noEmit']);
 runLocalBin('Lint', 'eslint', ['.', '--max-warnings=0']);
 console.log('\n▶ Production build');
-const buildResult = spawnSync(bin('next'), ['build'], {
+const buildResult = spawnSync(process.execPath, ['scripts/build.mjs'], {
   encoding: 'utf8',
   shell: false,
   env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
@@ -65,5 +65,5 @@ if (buildResult.status !== 0) {
   console.error(`\nProduction build failed with exit code ${buildResult.status}`);
   process.exit(buildResult.status ?? 1);
 }
-run('Static route output guard', process.execPath, ['scripts/assert-no-static-routes.mjs', 'build-output.log']);
+run('Route diagnostics', process.execPath, ['scripts/inspect-routes.mjs', '--build-output', 'build-output.log']);
 runNpmAudit();

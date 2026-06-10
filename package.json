@@ -6,12 +6,14 @@
   "description": "SaaS foundation with Layer 1 demand engine and Phase 4 budget baseline governance module.",
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "NEXT_TELEMETRY_DISABLED=1 next build",
+    "build": "node scripts/build.mjs",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "inspect:routes": "node scripts/inspect-routes.mjs",
+    "inspect": "node scripts/inspect-routes.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.10.3",

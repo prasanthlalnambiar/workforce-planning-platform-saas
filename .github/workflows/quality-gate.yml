@@ -35,6 +35,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Route diagnostics before build
+        run: npm run inspect:routes
+
       - name: Production build
         timeout-minutes: 8
         shell: bash
@@ -43,16 +46,7 @@ jobs:
           npm run build 2>&1 | tee build-output.log
 
       - name: Static route output guard
-        shell: bash
-        run: |
-          if grep -q "○" build-output.log; then
-            echo "Static routes detected"
-            grep "○" build-output.log
-            exit 1
-          fi
-          grep -q "ƒ /" build-output.log
-          grep -q "ƒ /_not-found" build-output.log
-          grep -q "ƒ /login" build-output.log
+        run: npm run inspect:routes -- --build-output build-output.log
 
       - name: Dependency audit
         run: npm audit --audit-level=low

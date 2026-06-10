@@ -5,26 +5,38 @@ import { existsSync, readFileSync } from 'node:fs';
 const packageJson = readFileSync(new URL('../package.json', import.meta.url), 'utf8');
 const workflow = readFileSync(new URL('../.github/workflows/quality-gate.yml', import.meta.url), 'utf8');
 const verifyScript = readFileSync(new URL('../scripts/verify.mjs', import.meta.url), 'utf8');
-const staticRouteGuard = readFileSync(new URL('../scripts/assert-no-static-routes.mjs', import.meta.url), 'utf8');
+const buildScript = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+const inspectRoutesScript = readFileSync(new URL('../scripts/inspect-routes.mjs', import.meta.url), 'utf8');
 
 test('Pages Router remains disabled for the App Router SaaS build', () => {
   assert.equal(existsSync(new URL('../pages', import.meta.url)), false);
 });
 
-test('production build disables Next telemetry', () => {
-  assert.match(packageJson, /"build":\s*"NEXT_TELEMETRY_DISABLED=1 next build"/);
+test('production build uses the hermetic Node wrapper and disables Next telemetry', () => {
+  assert.match(packageJson, /"build":\s*"node scripts\/build\.mjs"/);
+  assert.match(buildScript, /NEXT_TELEMETRY_DISABLED\s*=\s*'1'/);
+  assert.match(buildScript, /\['build'\]/);
 });
 
-test('CI captures build output and fails if static route rows appear', () => {
+test('route diagnostic script checks source and route-table static risk robustly', () => {
+  assert.match(packageJson, /"inspect:routes":\s*"node scripts\/inspect-routes\.mjs"/);
+  assert.match(packageJson, /"inspect":\s*"node scripts\/inspect-routes\.mjs"/);
+  assert.match(inspectRoutesScript, /root layout dynamic/);
+  assert.match(inspectRoutesScript, /static-risk routes/);
+  assert.match(inspectRoutesScript, /build static rows/);
+  assert.match(inspectRoutesScript, /required dynamic routes missing/);
+  assert.match(inspectRoutesScript, /\/login/);
+  assert.match(inspectRoutesScript, /\/_not-found/);
+});
+
+test('CI captures build output and uses route diagnostics instead of a naive legend grep', () => {
   assert.match(workflow, /tee build-output\.log/);
-  assert.match(workflow, /grep -q "○" build-output\.log/);
-  assert.match(workflow, /Static routes detected/);
+  assert.match(workflow, /npm run inspect:routes -- --build-output build-output\.log/);
+  assert.doesNotMatch(workflow, /grep -q "○"/);
 });
 
-test('local verification also checks build output for static route rows', () => {
+test('local verification also checks build output through route diagnostics', () => {
   assert.match(verifyScript, /build-output\.log/);
-  assert.match(verifyScript, /assert-no-static-routes\.mjs/);
-  assert.match(staticRouteGuard, /output\.includes\('○'\)/);
-  assert.match(staticRouteGuard, /ƒ \/_not-found/);
-  assert.match(staticRouteGuard, /ƒ \/login/);
+  assert.match(verifyScript, /scripts\/build\.mjs/);
+  assert.match(verifyScript, /scripts\/inspect-routes\.mjs/);
 });
