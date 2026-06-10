@@ -63,3 +63,22 @@ test('Budget baseline permissions separate create, review and lock authority', (
   assert.equal(hasPermission(['integration_admin'], 'baseline:lock'), false);
   assert.equal(hasPermission(['ai_admin'], 'baseline:lock'), false);
 });
+
+test('Driver layer permissions separate create, write and review authority', () => {
+  assert.equal(hasPermission(['owner'], 'driver:create'), true);
+  assert.equal(hasPermission(['owner'], 'driver:review'), true);
+  assert.equal(hasPermission(['admin'], 'driver:write'), true);
+  assert.equal(hasPermission(['finance_admin'], 'driver:review'), true);
+  assert.equal(hasPermission(['planner'], 'driver:create'), true);
+  assert.equal(hasPermission(['planner'], 'driver:write'), true);
+  assert.equal(hasPermission(['planner'], 'driver:review'), false);
+  assert.equal(hasPermission(['reviewer'], 'driver:read'), true);
+  assert.equal(hasPermission(['reviewer'], 'driver:review'), true);
+  assert.equal(hasPermission(['reviewer'], 'driver:write'), false);
+  assert.equal(hasPermission(['viewer'], 'driver:read'), true);
+  assert.equal(hasPermission(['viewer'], 'driver:create'), false);
+  assert.equal(hasPermission(['auditor'], 'driver:read'), true);
+  assert.equal(hasPermission(['auditor'], 'driver:review'), false);
+  assert.equal(hasPermission(['integration_admin'], 'driver:read'), false);
+  assert.equal(hasPermission(['ai_admin'], 'driver:create'), false);
+});

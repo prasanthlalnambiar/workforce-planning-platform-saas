@@ -144,7 +144,6 @@ Auth and tenant checks remain inside the protected pages and server-side reposit
 
 The following are deliberately not built yet:
 
-- driver layer
 - reforecast engine
 - actuals ingestion
 - variance reporting
@@ -170,6 +169,19 @@ Monthly phasing rules:
 - budget, labour cost and workload hours must reconcile back to annual totals within a small rounding tolerance
 - once locked, the baseline header, monthly lines and snapshot are immutable
 - Phase 4 prevents locking a second baseline for the same organisation, plan and fiscal year. Controlled baseline supersession is a later enhancement.
+
+## Driver Layer notes
+
+Phase 5 converts a locked budget baseline into governed growth, efficiency and management adjustment drivers.
+
+Driver rules:
+
+- driver sets can only be created from locked immutable budget baselines
+- drivers are monthly phased across the 12 baseline periods
+- driver impacts are planning assumptions, not official forecast values
+- reviewed driver sets, drivers and monthly impacts are immutable evidence
+- material driver actions are routed through service-role RPCs and audit events
+- Phase 5 does not create reforecast locks, actuals, variance, waterfall or AI outputs
 
 ## Layer 1 calculation notes
 
@@ -207,12 +219,12 @@ Important: if one-off work is included, Phase 2 shows it inside the selected mod
 - Tenant scoping is enforced through repository queries, database guardrails and Supabase RLS policies
 - Material actions write audit events through controlled server-side services
 - Deterministic calculations are authoritative
-- AI is not implemented in Phase 4
+- AI is not implemented in Phase 5
 - Calculation logic is isolated in testable modules and not buried in UI components
 - Locked Layer 1 snapshots and handoff payloads are immutable
 - Locked budget baseline headers, lines and snapshots are immutable
-- Phase 4 stops at locked budget baseline; drivers and reforecasting are not implemented yet
-- Phase 4.1 adds proof and hardening only; no Phase 5 features are implemented
+- Reviewed driver sets, drivers and monthly impacts are immutable
+- Phase 5 stops at the driver layer; reforecast locks, actuals, variance, waterfall and AI are not implemented yet
 
 ## Tech stack
 
@@ -233,7 +245,7 @@ workforce-planning-platform-saas/
 ├── docs/                        # Phase documentation
 ├── lib/                         # Supabase clients, repositories, audit, tenant, permission and calculation services
 ├── supabase/migrations/         # Database schema, functions, triggers and RLS policies
-├── tests/                       # Unit tests for foundation, Layer 1 and Budget Baseline logic
+├── tests/                       # Unit tests for foundation, Layer 1, Budget Baseline and Driver Layer logic
 ├── types/                       # TypeScript domain and database types
 ├── .env.example                 # Safe environment variable template
 ├── .gitignore                   # Git exclusions for secrets and build artefacts
@@ -274,6 +286,7 @@ supabase/migrations/004_phase3_layer1_approval_lock_handoff.sql
 supabase/migrations/005_phase3_1_layer1_governance_hardening.sql
 supabase/migrations/006_phase4_budget_baseline_module.sql
 supabase/migrations/007_phase4_1_commercial_qa_hardening.sql
+supabase/migrations/008_phase5_driver_layer.sql
 ```
 
 The migrations create and harden:
@@ -289,6 +302,7 @@ The migrations create and harden:
 - Layer 1 Phase 3 approval, lock, snapshot and handoff support
 - Layer 1 Phase 3.1 transaction-safe lock/handoff RPC and controlled handoff transitions
 - Phase 4 budget baseline tables, monthly lines, immutable snapshots, controlled baseline RPCs and lock guards
+- Phase 5 driver sets, structured drivers, monthly impacts, review immutability and controlled driver RPCs
 
 ## Local development
 

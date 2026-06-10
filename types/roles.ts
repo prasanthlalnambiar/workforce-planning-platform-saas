@@ -32,6 +32,10 @@ export type Permission =
   | 'baseline:create'
   | 'baseline:review'
   | 'baseline:lock'
+  | 'driver:read'
+  | 'driver:write'
+  | 'driver:create'
+  | 'driver:review'
   | 'integrations:manage'
   | 'ai:manage';
 

@@ -69,6 +69,9 @@ export interface Database {
       budget_baselines: GenericTable;
       budget_baseline_lines: GenericTable;
       budget_baseline_snapshots: GenericTable;
+      budget_driver_sets: GenericTable;
+      budget_drivers: GenericTable;
+      budget_driver_monthly_impacts: GenericTable;
       audit_events: {
         Row: AuditEventsRow;
         Insert: AuditEventsInsert;
@@ -134,6 +137,43 @@ export interface Database {
           lock_reason?: string | null;
         };
         Returns: Json;
+      };
+      create_budget_driver_set_from_baseline: {
+        Args: {
+          target_organisation_id: string;
+          target_budget_baseline_id: string;
+          target_actor_user_id: string;
+          driver_set_payload: Json;
+          create_reason?: string | null;
+        };
+        Returns: Json;
+      };
+      create_budget_driver: {
+        Args: {
+          target_organisation_id: string;
+          target_driver_set_id: string;
+          target_actor_user_id: string;
+          driver_payload: Json;
+          impact_payloads: Json;
+          create_reason?: string | null;
+        };
+        Returns: Json;
+      };
+      review_budget_driver_set: {
+        Args: {
+          target_organisation_id: string;
+          target_driver_set_id: string;
+          target_actor_user_id: string;
+          review_reason?: string | null;
+        };
+        Returns: Json;
+      };
+      refresh_budget_driver_set_totals: {
+        Args: {
+          target_organisation_id: string;
+          target_driver_set_id: string;
+        };
+        Returns: void;
       };
       transition_layer1_handoff_status: {
         Args: {

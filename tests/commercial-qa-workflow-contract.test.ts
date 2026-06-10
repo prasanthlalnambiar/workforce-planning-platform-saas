@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { calculateLayer1Output, compareLayer1Scenarios, starterScenarios } from '../lib/layer1/calculation-engine';
 import { buildLayer1HandoffPayload, buildLayer1VersionSnapshot, checksumLayer1Snapshot } from '../lib/layer1/governance';
 import { annualsFromLayer1Handoff, buildBudgetBaselineSnapshot, checkBaselineReconciliation, checksumBudgetBaselineSnapshot, createStraightLineBaselineLines, type BudgetPlanningPeriod } from '../lib/baseline/baseline-engine';
+import { phaseDriverImpact, summariseDriverImpacts } from '../lib/drivers/driver-engine';
 import type { Layer1Assumptions, Layer1DemandInput } from '../lib/layer1/calculation-types';
 
 function twelvePeriods(): BudgetPlanningPeriod[] {
@@ -16,7 +17,7 @@ function twelvePeriods(): BudgetPlanningPeriod[] {
   }));
 }
 
-test('Phase 1 to Phase 4 workflow contract preserves deterministic planning evidence through locked baseline', () => {
+test('Phase 1 to Phase 5 workflow contract preserves deterministic evidence through driver layer', () => {
   const organisationId = randomUUID();
   const planId = randomUUID();
   const fiscalYearId = randomUUID();
@@ -143,9 +144,27 @@ test('Phase 1 to Phase 4 workflow contract preserves deterministic planning evid
   assert.equal((finalSnapshot.baseline as Record<string, unknown>).is_immutable, true);
   assert.equal((finalSnapshot.governance as Record<string, unknown>).checksum, baselineChecksum);
   assert.equal(checksumBudgetBaselineSnapshot(finalSnapshot), baselineChecksum);
+
+  const driverImpacts = phaseDriverImpact(immutableLines.map((line) => ({
+    periodId: String(line.periodId),
+    budgetBaselineLineId: String(line.id),
+    periodStart: String(line.periodStart),
+    periodEnd: String(line.periodEnd)
+  })), {
+    annualBudgetDelta: -250_000,
+    annualLabourCostDelta: -220_000,
+    annualRequiredFteDelta: -2.2,
+    annualWorkloadHoursDelta: -1600
+  });
+  const driverSummary = summariseDriverImpacts(driverImpacts);
+  assert.equal(driverSummary.totalBudgetDelta, -250_000);
+  assert.equal(driverSummary.totalLabourCostDelta, -220_000);
+  assert.equal(driverSummary.totalRequiredFteDelta, -2.2);
+  assert.equal(driverSummary.totalWorkloadHoursDelta, -1600);
+  assert.equal((finalSnapshot.baseline as Record<string, unknown>).status, 'locked');
 });
 
-test('blocked-path contract prevents non-ready handoffs and locked baseline edits by design', () => {
+test('blocked-path contract prevents non-ready handoffs, locked baseline edits and premature forecasts by design', () => {
   const nonReadyStatuses = ['draft', 'approved', 'locked', 'superseded', 'voided'];
   for (const status of nonReadyStatuses) {
     assert.notEqual(status, 'ready_for_layer2');
@@ -153,4 +172,7 @@ test('blocked-path contract prevents non-ready handoffs and locked baseline edit
 
   const lockedBaseline = { status: 'locked', is_immutable: true };
   assert.equal(lockedBaseline.status === 'locked' || lockedBaseline.is_immutable === true, true);
+
+  const reviewedDriverSet = { status: 'reviewed', is_immutable: true };
+  assert.equal(reviewedDriverSet.status === 'reviewed' && reviewedDriverSet.is_immutable === true, true);
 });

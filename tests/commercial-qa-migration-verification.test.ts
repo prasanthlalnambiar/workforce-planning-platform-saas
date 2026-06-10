@@ -28,10 +28,13 @@ const governedBusinessTables = [
   'budget_baselines',
   'budget_baseline_lines',
   'budget_baseline_snapshots',
+  'budget_driver_sets',
+  'budget_drivers',
+  'budget_driver_monthly_impacts',
   'audit_events'
 ];
 
-test('Phase 4.1 migrations are ordered and cumulative from zero', () => {
+test('migrations are ordered and cumulative from zero through Phase 5', () => {
   assert.deepEqual(migrationFiles, [
     '001_phase1_foundation.sql',
     '002_phase1_1_hardening.sql',
@@ -39,7 +42,8 @@ test('Phase 4.1 migrations are ordered and cumulative from zero', () => {
     '004_phase3_layer1_approval_lock_handoff.sql',
     '005_phase3_1_layer1_governance_hardening.sql',
     '006_phase4_budget_baseline_module.sql',
-    '007_phase4_1_commercial_qa_hardening.sql'
+    '007_phase4_1_commercial_qa_hardening.sql',
+    '008_phase5_driver_layer.sql'
   ]);
 });
 
@@ -55,7 +59,10 @@ test('service-role-only governance RPCs are not executable by anon or authentica
     'create_layer1_lock_and_handoff\\(uuid, uuid, uuid, uuid, uuid, jsonb, jsonb, text, text\\)',
     'transition_layer1_handoff_status_controlled\\(uuid, uuid, uuid, uuid, text, text\\)',
     'create_budget_baseline_draft\\(uuid, uuid, jsonb, jsonb, text\\)',
-    'lock_budget_baseline\\(uuid, uuid, uuid, uuid, uuid, jsonb, text, text\\)'
+    'lock_budget_baseline\\(uuid, uuid, uuid, uuid, uuid, jsonb, text, text\\)',
+    'create_budget_driver_set_from_baseline\\(uuid, uuid, uuid, jsonb, text\\)',
+    'create_budget_driver\\(uuid, uuid, uuid, jsonb, jsonb, text\\)',
+    'review_budget_driver_set\\(uuid, uuid, uuid, text\\)'
   ];
 
   for (const signature of serviceOnlyFunctions) {
@@ -82,7 +89,10 @@ test('tenant consistency guardrails cover guessed UUID cross-organisation refere
     /FOREIGN KEY \(organisation_id, source_id\) REFERENCES public\.source_inventory\(organisation_id, id\)/,
     /FOREIGN KEY \(organisation_id, approved_calculation_run_id\) REFERENCES public\.calculation_runs\(organisation_id, id\)/,
     /FOREIGN KEY \(organisation_id, source_layer1_handoff_id\) REFERENCES public\.layer1_handoff_objects\(organisation_id, id\)/,
-    /FOREIGN KEY \(organisation_id, budget_baseline_id\) REFERENCES public\.budget_baselines\(organisation_id, id\)/
+    /FOREIGN KEY \(organisation_id, budget_baseline_id\) REFERENCES public\.budget_baselines\(organisation_id, id\)/,
+    /FOREIGN KEY \(organisation_id, driver_set_id\) REFERENCES public\.budget_driver_sets\(organisation_id, id\)/,
+    /FOREIGN KEY \(organisation_id, budget_driver_id\) REFERENCES public\.budget_drivers\(organisation_id, id\)/,
+    /FOREIGN KEY \(organisation_id, budget_baseline_line_id\) REFERENCES public\.budget_baseline_lines\(organisation_id, id\)/
   ];
 
   for (const guard of requiredCompositeGuards) {
