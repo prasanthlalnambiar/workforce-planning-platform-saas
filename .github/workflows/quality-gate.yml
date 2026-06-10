@@ -37,7 +37,22 @@ jobs:
 
       - name: Production build
         timeout-minutes: 8
-        run: npm run build
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build-output.log
+
+      - name: Static route output guard
+        shell: bash
+        run: |
+          if grep -q "○" build-output.log; then
+            echo "Static routes detected"
+            grep "○" build-output.log
+            exit 1
+          fi
+          grep -q "ƒ /" build-output.log
+          grep -q "ƒ /_not-found" build-output.log
+          grep -q "ƒ /login" build-output.log
 
       - name: Dependency audit
         run: npm audit --audit-level=low

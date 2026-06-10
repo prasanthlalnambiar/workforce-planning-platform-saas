@@ -53,3 +53,18 @@ test('pages that call requireUserContext are covered by protected dynamic render
     }
   }
 });
+
+
+test('root layout forces dynamic Node rendering for the full App Router tree', () => {
+  const source = readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
+  assert.match(source, /export const dynamic = 'force-dynamic';/, 'app/layout.tsx must force dynamic rendering for all routes');
+  assert.match(source, /export const runtime = 'nodejs';/, 'app/layout.tsx must use Node runtime');
+});
+
+test('public root and login routes are dynamic to avoid build-time execution', () => {
+  for (const file of ['app/page.tsx', 'app/login/page.tsx']) {
+    const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+    assert.match(source, /export const dynamic = 'force-dynamic';/, `${file} must not be statically prerendered`);
+    assert.match(source, /export const runtime = 'nodejs';/, `${file} must use Node runtime`);
+  }
+});

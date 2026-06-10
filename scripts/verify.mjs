@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const isWindows = process.platform === 'win32';
@@ -18,13 +18,13 @@ function run(label, command, args, options = {}) {
   }
 }
 
-function runLocalBin(label, name, args) {
+function runLocalBin(label, name, args, options = {}) {
   const command = bin(name);
   if (!existsSync(command)) {
     console.error(`${label} cannot run because ${command} does not exist. Run npm ci first.`);
     process.exit(1);
   }
-  run(label, command, args);
+  run(label, command, args, options);
 }
 
 function runNpmAudit() {
@@ -46,5 +46,24 @@ const testFiles = readdirSync(join(process.cwd(), 'tests'))
 run('Unit and contract tests', process.execPath, ['--import', 'tsx', '--test', ...testFiles]);
 runLocalBin('TypeScript typecheck', 'tsc', ['--noEmit']);
 runLocalBin('Lint', 'eslint', ['.', '--max-warnings=0']);
-runLocalBin('Production build', 'next', ['build']);
+console.log('\n▶ Production build');
+const buildResult = spawnSync(bin('next'), ['build'], {
+  encoding: 'utf8',
+  shell: false,
+  env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
+  maxBuffer: 1024 * 1024 * 50
+});
+const buildOutput = `${buildResult.stdout || ''}${buildResult.stderr || ''}`;
+writeFileSync(join(process.cwd(), 'build-output.log'), buildOutput);
+if (buildResult.stdout) process.stdout.write(buildResult.stdout);
+if (buildResult.stderr) process.stderr.write(buildResult.stderr);
+if (buildResult.error) {
+  console.error(`\nProduction build failed to start: ${buildResult.error.message}`);
+  process.exit(1);
+}
+if (buildResult.status !== 0) {
+  console.error(`\nProduction build failed with exit code ${buildResult.status}`);
+  process.exit(buildResult.status ?? 1);
+}
+run('Static route output guard', process.execPath, ['scripts/assert-no-static-routes.mjs', 'build-output.log']);
 runNpmAudit();
