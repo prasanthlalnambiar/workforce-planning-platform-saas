@@ -7,6 +7,15 @@ const projectRoot = dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   typedRoutes: false,
   reactStrictMode: true,
+  // TypeScript and ESLint remain mandatory standalone gates in CI and npm run verify.
+  // They are intentionally separated from Next's internal build validation so
+  // hermetic production builds do not hang in external sandbox environments.
+  typescript: {
+    ignoreBuildErrors: true
+  },
+  eslint: {
+    ignoreDuringBuilds: true
+  },
   outputFileTracingRoot: projectRoot,
   outputFileTracingExcludes: {
     '/*': [

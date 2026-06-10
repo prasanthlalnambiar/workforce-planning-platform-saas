@@ -7,6 +7,7 @@ const workflow = readFileSync(new URL('../.github/workflows/quality-gate.yml', i
 const verifyScript = readFileSync(new URL('../scripts/verify.mjs', import.meta.url), 'utf8');
 const buildScript = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const inspectRoutesScript = readFileSync(new URL('../scripts/inspect-routes.mjs', import.meta.url), 'utf8');
+const nextConfig = readFileSync(new URL('../next.config.mjs', import.meta.url), 'utf8');
 
 test('Pages Router remains disabled for the App Router SaaS build', () => {
   assert.equal(existsSync(new URL('../pages', import.meta.url)), false);
@@ -39,4 +40,20 @@ test('local verification also checks build output through route diagnostics', ()
   assert.match(verifyScript, /build-output\.log/);
   assert.match(verifyScript, /scripts\/build\.mjs/);
   assert.match(verifyScript, /scripts\/inspect-routes\.mjs/);
+});
+
+
+test('Next internal build validation is separated from mandatory standalone gates', () => {
+  assert.match(nextConfig, /typescript:\s*{\s*ignoreBuildErrors:\s*true\s*}/s);
+  assert.match(nextConfig, /eslint:\s*{\s*ignoreDuringBuilds:\s*true\s*}/s);
+  assert.match(workflow, /npm run typecheck/);
+  assert.match(workflow, /npm run lint/);
+  assert.match(workflow, /npm run build/);
+  assert.ok(workflow.indexOf('npm run typecheck') < workflow.indexOf('npm run build'));
+  assert.ok(workflow.indexOf('npm run lint') < workflow.indexOf('npm run build'));
+  assert.match(verifyScript, /TypeScript typecheck/);
+  assert.match(verifyScript, /Lint/);
+  assert.match(verifyScript, /Production build/);
+  assert.ok(verifyScript.indexOf('TypeScript typecheck') < verifyScript.indexOf('Production build'));
+  assert.ok(verifyScript.indexOf('Lint') < verifyScript.indexOf('Production build'));
 });
