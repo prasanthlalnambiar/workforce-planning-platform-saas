@@ -8,6 +8,8 @@ const verifyScript = readFileSync(new URL('../scripts/verify.mjs', import.meta.u
 const rootLayout = readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
 const rootPage = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
 const loginPage = readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
+const runtimeErrorPage = readFileSync(new URL('../pages/_error.tsx', import.meta.url), 'utf8');
+const packageJson = readFileSync(new URL('../package.json', import.meta.url), 'utf8');
 
 test('external build avoids duplicate Next validation while quality gate still enforces lint and typecheck', () => {
   assert.match(nextConfig, /eslint:\s*{\s*ignoreDuringBuilds:\s*true\s*}/s);
@@ -25,4 +27,13 @@ test('root, redirect and login routes are dynamic to avoid build-time auth/login
     assert.match(file, /export const dynamic = 'force-dynamic';/);
     assert.match(file, /export const runtime = 'nodejs';/);
   }
+});
+
+test('default 404 and 500 pages are not statically exported during production build', () => {
+  assert.match(runtimeErrorPage, /getInitialProps\s*=/);
+  assert.match(runtimeErrorPage, /NextErrorComponent\.getInitialProps/);
+});
+
+test('route inspection helper is available for external build diagnostics', () => {
+  assert.match(packageJson, /"inspect:routes":\s*"node scripts\/inspect-routes\.mjs"/);
 });

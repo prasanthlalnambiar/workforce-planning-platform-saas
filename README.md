@@ -221,6 +221,14 @@ The production build is intentionally separated from TypeScript and ESLint valid
 
 The app also forces the root layout, root redirect page and login page to dynamic Node.js rendering so build-time page data collection does not execute runtime-adjacent auth/login paths. Protected pages remain dynamic as well.
 
+The remaining static generation work identified in external ZIP testing was Next.js' default `/404` and `/500` export, both mapped to the default `/_error` route. This SaaS app now provides a runtime `pages/_error.tsx` using `getInitialProps`, which prevents those status pages from being statically exported during `next build`.
+
+Build diagnostics:
+
+```bash
+npm run inspect:routes
+```
+
 ## Tech stack
 
 - Next.js

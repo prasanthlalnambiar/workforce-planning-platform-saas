@@ -92,6 +92,10 @@ The production build is intentionally separated from TypeScript and ESLint valid
 
 The app also forces the root layout, root redirect page and login page to dynamic Node.js rendering so build-time page data collection does not execute runtime-adjacent auth/login paths. Protected pages remain dynamic as well.
 
+The remaining static generation work in external ZIP testing was Next.js' default `/404` and `/500` export, both mapped to `/_error`. Because this product is a runtime SaaS app, not a static export site, `pages/_error.tsx` defines `getInitialProps` and delegates to `next/error` so those status pages are handled dynamically instead of being statically generated during build.
+
+Run `npm run inspect:routes` when investigating future build hangs. The helper prints each route's dynamic/runtime exports and risky static-generation imports.
+
 ## External ZIP rule
 
 External review ZIPs must exclude:
