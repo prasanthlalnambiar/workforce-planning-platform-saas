@@ -6,6 +6,8 @@ import { calculateLayer1Output } from '../../lib/layer1/calculation-engine';
 import { mapAssumptions, mapDemandRows } from '../../lib/layer1/row-mappers';
 import { EmptyPlanState, Layer1Subnav, PlanSelector, StatCard, money, num, selectedPlanId, type Layer1SearchParams } from './_components/layer1-shared';
 
+
+export const dynamic = 'force-dynamic';
 export default async function Layer1DashboardPage({ searchParams }: { searchParams?: Layer1SearchParams }) {
   const context = await requireUserContext();
   const planId = await selectedPlanId(searchParams);

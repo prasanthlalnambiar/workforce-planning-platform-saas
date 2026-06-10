@@ -2,6 +2,8 @@ import { AppShell } from '../../components/app-shell/app-shell';
 import { PlaceholderPage } from '../../components/ui/placeholder-page';
 import { requireUserContext } from '../../lib/auth/session';
 
+
+export const dynamic = 'force-dynamic';
 export default async function Page() {
   const context = await requireUserContext();
   return (

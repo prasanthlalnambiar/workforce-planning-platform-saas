@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { bootstrapOrganisationAction } from './actions';
 import { getCurrentUserContext, requireAuthenticatedUser } from '../../lib/auth/session';
 
+
+export const dynamic = 'force-dynamic';
 export default async function OnboardingPage() {
   const user = await requireAuthenticatedUser();
   const context = await getCurrentUserContext();

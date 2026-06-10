@@ -3,6 +3,8 @@ import { PageHeader } from '../../components/ui/page-header';
 import { requireUserContext } from '../../lib/auth/session';
 import { listAuditEvents } from '../../lib/repositories/audit-events';
 
+
+export const dynamic = 'force-dynamic';
 export default async function AuditPage() {
   const context = await requireUserContext();
   const events = await listAuditEvents(context).catch(() => []);

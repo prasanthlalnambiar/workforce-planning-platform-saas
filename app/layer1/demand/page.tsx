@@ -6,6 +6,8 @@ import { demandCategories, getLayer1DataSet } from '../../../lib/repositories/la
 import { hasPermission } from '../../../lib/permissions/permissions';
 import { EmptyPlanState, Layer1Subnav, PlanSelector, num, selectedPlanId, type Layer1SearchParams } from '../_components/layer1-shared';
 
+
+export const dynamic = 'force-dynamic';
 export default async function DemandInputsPage({ searchParams }: { searchParams?: Layer1SearchParams }) {
   const context = await requireUserContext();
   const data = await getLayer1DataSet(context, await selectedPlanId(searchParams));

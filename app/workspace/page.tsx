@@ -6,6 +6,8 @@ import { requireUserContext } from '../../lib/auth/session';
 import { listPlans } from '../../lib/repositories/plans';
 import { hasPermission } from '../../lib/permissions/permissions';
 
+
+export const dynamic = 'force-dynamic';
 export default async function WorkspacePage() {
   const context = await requireUserContext();
   const plans = await listPlans(context);

@@ -6,6 +6,8 @@ import { requireUserContext } from '../../lib/auth/session';
 import { getBudgetBaselineDashboard, canCreateBaseline } from '../../lib/repositories/budget-baselines';
 import { BaselineSubnav, SourceBadge, StatCard, StatusBadge, displayDate, firstFiscalYearLabel, firstPlanName, money, num, summariseList, text } from './_components/baseline-shared';
 
+
+export const dynamic = 'force-dynamic';
 export default async function BudgetBaselinePage() {
   const context = await requireUserContext();
   const data = await getBudgetBaselineDashboard(context);

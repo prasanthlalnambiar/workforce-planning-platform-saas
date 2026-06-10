@@ -6,6 +6,8 @@ import { getLayer1DataSet } from '../../../lib/repositories/layer1';
 import { hasPermission } from '../../../lib/permissions/permissions';
 import { EmptyPlanState, Layer1Subnav, PlanSelector, num, selectedPlanId, type Layer1SearchParams } from '../_components/layer1-shared';
 
+
+export const dynamic = 'force-dynamic';
 const sourceTypes = ['wfm', 'crm', 'case_system', 'finance_plan', 'sales_forecast', 'stakeholder_interview', 'manual_tracker', 'calendar_sample', 'benchmark', 'unknown', 'other'];
 
 export default async function SourcesPage({ searchParams }: { searchParams?: Layer1SearchParams }) {

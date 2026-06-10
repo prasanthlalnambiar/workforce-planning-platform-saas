@@ -7,6 +7,8 @@ import { hasPermission } from '../../../lib/permissions/permissions';
 import { mapAssumptions } from '../../../lib/layer1/row-mappers';
 import { EmptyPlanState, Layer1Subnav, PlanSelector, money, num, percent, selectedPlanId, type Layer1SearchParams } from '../_components/layer1-shared';
 
+
+export const dynamic = 'force-dynamic';
 export default async function AssumptionsPage({ searchParams }: { searchParams?: Layer1SearchParams }) {
   const context = await requireUserContext();
   const data = await getLayer1DataSet(context, await selectedPlanId(searchParams));

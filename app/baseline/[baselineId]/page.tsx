@@ -7,6 +7,8 @@ import { hasPermission } from '../../../lib/permissions/permissions';
 import { canLockBaseline, canReviewBaseline, getBudgetBaselineDetail } from '../../../lib/repositories/budget-baselines';
 import { SourceBadge, StatCard, StatusBadge, asArray, asRecord, displayDate, money, num, summariseList, text } from '../_components/baseline-shared';
 
+
+export const dynamic = 'force-dynamic';
 export default async function BudgetBaselineDetailPage({ params }: { params: Promise<{ baselineId: string }> }) {
   const context = await requireUserContext();
   const { baselineId } = await params;

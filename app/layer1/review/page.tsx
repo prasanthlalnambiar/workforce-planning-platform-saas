@@ -13,6 +13,8 @@ import { canApproveLayer1, canLockLayer1, canSubmitLayer1 } from '../../../lib/l
 import { getLayer1GovernanceData } from '../../../lib/repositories/layer1';
 import { EmptyPlanState, Layer1Subnav, PlanSelector, money, num, selectedPlanId, type Layer1SearchParams } from '../_components/layer1-shared';
 
+export const dynamic = 'force-dynamic';
+
 type JsonRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): JsonRecord {

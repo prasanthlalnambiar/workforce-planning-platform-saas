@@ -112,6 +112,15 @@ Phase 4 builds the Budget Baseline Module and stops at the locked annual baselin
 
 Phase 4 does not build drivers, reforecasting, actuals, variance, waterfall or AI.
 
+
+### Build hardening after Phase 4
+
+Protected App Router pages explicitly opt into dynamic rendering with `export const dynamic = 'force-dynamic'`.
+This prevents production builds from trying to statically collect page data for routes that require Supabase auth, tenant context, cookies or server-only repositories.
+
+The middleware remains intentionally lightweight and does not import Supabase client packages.
+Auth and tenant checks remain inside the protected pages and server-side repository layer.
+
 ### Not implemented yet
 
 The following are deliberately not built yet:
@@ -293,6 +302,14 @@ Run audit:
 ```bash
 npm audit
 ```
+
+Run the full verification sequence:
+
+```bash
+npm run verify
+```
+
+For clean ZIP/check-out verification, see `BUILD_VERIFICATION.md`.
 
 ## GitHub safety notes
 

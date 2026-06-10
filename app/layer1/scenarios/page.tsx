@@ -8,6 +8,8 @@ import { compareLayer1Scenarios, scenarioTypeLabel } from '../../../lib/layer1/c
 import { mapAssumptions, mapDemandRows } from '../../../lib/layer1/row-mappers';
 import { EmptyPlanState, Layer1Subnav, PlanSelector, money, num, selectedPlanId, type Layer1SearchParams } from '../_components/layer1-shared';
 
+
+export const dynamic = 'force-dynamic';
 const scenarioTypeOptions = [
   ['base', 'Base'],
   ['high_demand', 'High demand'],
