@@ -16,6 +16,14 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true
   },
+  // External QA sandboxes have hung while Next is collecting page data through
+  // its default worker pool. This app is fully dynamic, so keep build-time
+  // static analysis single-lane and deterministic.
+  experimental: {
+    cpus: 1,
+    staticGenerationMaxConcurrency: 1,
+    staticGenerationMinPagesPerWorker: 1
+  },
   outputFileTracingRoot: projectRoot,
   outputFileTracingExcludes: {
     '/*': [

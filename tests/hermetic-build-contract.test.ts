@@ -57,3 +57,9 @@ test('Next internal build validation is separated from mandatory standalone gate
   assert.ok(verifyScript.indexOf('TypeScript typecheck') < verifyScript.indexOf('Production build'));
   assert.ok(verifyScript.indexOf('Lint') < verifyScript.indexOf('Production build'));
 });
+
+test('Next page-data collection uses deterministic single-lane workers', () => {
+  assert.match(nextConfig, /experimental:\s*{[^}]*cpus:\s*1/s);
+  assert.match(nextConfig, /experimental:\s*{[^}]*staticGenerationMaxConcurrency:\s*1/s);
+  assert.match(nextConfig, /experimental:\s*{[^}]*staticGenerationMinPagesPerWorker:\s*1/s);
+});
