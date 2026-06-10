@@ -29,6 +29,9 @@ export type Permission =
   | 'layer1:approve_lock'
   | 'baseline:read'
   | 'baseline:write'
+  | 'baseline:create'
+  | 'baseline:review'
+  | 'baseline:lock'
   | 'integrations:manage'
   | 'ai:manage';
 

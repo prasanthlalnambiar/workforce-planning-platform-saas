@@ -66,6 +66,9 @@ export interface Database {
       calculation_runs: GenericTable;
       layer1_version_locks: GenericTable;
       layer1_handoff_objects: GenericTable;
+      budget_baselines: GenericTable;
+      budget_baseline_lines: GenericTable;
+      budget_baseline_snapshots: GenericTable;
       audit_events: {
         Row: AuditEventsRow;
         Insert: AuditEventsInsert;
@@ -106,6 +109,29 @@ export interface Database {
           target_actor_user_id: string;
           next_status: string;
           transition_reason?: string | null;
+        };
+        Returns: Json;
+      };
+      create_budget_baseline_draft: {
+        Args: {
+          target_organisation_id: string;
+          target_actor_user_id: string;
+          baseline_payload: Json;
+          line_payloads: Json;
+          create_reason?: string | null;
+        };
+        Returns: Json;
+      };
+      lock_budget_baseline: {
+        Args: {
+          target_organisation_id: string;
+          target_plan_id: string;
+          target_fiscal_year_id: string;
+          target_budget_baseline_id: string;
+          target_actor_user_id: string;
+          snapshot_payload: Json;
+          target_checksum: string;
+          lock_reason?: string | null;
         };
         Returns: Json;
       };

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Phase 1 SaaS foundation for the Workforce Planning and Labour Budget Governance Platform.",
+  "description": "SaaS foundation with Layer 1 demand engine and Phase 4 budget baseline governance module.",
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",

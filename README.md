@@ -90,18 +90,58 @@ Phase 3.1 hardens Layer 1 governance before Layer 2 depends on it:
 - database-level permission checks for lock and handoff transitions
 - audit events written inside the governance database transaction
 
+
+### Implemented in Phase 4
+
+Phase 4 builds the Budget Baseline Module and stops at the locked annual baseline:
+
+- Budget Baseline dashboard
+- creation from a `ready_for_layer2` Layer 1 handoff only
+- manual baseline creation as a clearly separate path
+- monthly phasing over 12 planning periods
+- straight-line phasing with residual rounding handled in the final period
+- custom manual phasing edits before lock
+- deterministic reconciliation checks for annual budget, labour cost and workload hours
+- baseline review checkpoint
+- immutable budget baseline lock
+- immutable budget baseline snapshot with checksum
+- one active locked baseline rule per organisation, plan and fiscal year
+- controlled handoff transition to `imported_to_baseline` after successful Layer 1 handoff import
+- audit events for create, phasing, review, lock, snapshot and handoff import
+- database-level immutability protection for locked baseline headers, lines and snapshots
+
+Phase 4 does not build drivers, reforecasting, actuals, variance, waterfall or AI.
+
 ### Not implemented yet
 
 The following are deliberately not built yet:
 
-- Layer 2 baseline import from the approved Layer 1 handoff
-- Layer 2 budget baseline module
 - driver layer
 - reforecast engine
 - actuals ingestion
 - variance reporting
 - waterfall reporting
 - AI advisory module
+
+## Budget Baseline notes
+
+Phase 4 converts a governed Layer 1 handoff, or a manual Finance baseline, into the fixed annual OPEX/labour reference.
+
+Layer 1 import rules:
+
+- the handoff must belong to the same organisation and plan
+- the handoff must have `handoff_status = ready_for_layer2`
+- imported values come from immutable handoff JSON
+- the system does not recalculate current Layer 1 inputs during baseline import
+- after successful import, the handoff moves to `imported_to_baseline` through a controlled database function
+
+Monthly phasing rules:
+
+- `straight_line` is implemented and required
+- `custom_manual` edits are supported before lock
+- budget, labour cost and workload hours must reconcile back to annual totals within a small rounding tolerance
+- once locked, the baseline header, monthly lines and snapshot are immutable
+- Phase 4 prevents locking a second baseline for the same organisation, plan and fiscal year. Controlled baseline supersession is a later enhancement.
 
 ## Layer 1 calculation notes
 
@@ -139,10 +179,11 @@ Important: if one-off work is included, Phase 2 shows it inside the selected mod
 - Tenant scoping is enforced through repository queries, database guardrails and Supabase RLS policies
 - Material actions write audit events through controlled server-side services
 - Deterministic calculations are authoritative
-- AI is not implemented in Phase 3
+- AI is not implemented in Phase 4
 - Calculation logic is isolated in testable modules and not buried in UI components
 - Locked Layer 1 snapshots and handoff payloads are immutable
-- Phase 3 stops at `ready_for_layer2`; Layer 2 baseline import is not implemented yet
+- Locked budget baseline headers, lines and snapshots are immutable
+- Phase 4 stops at locked budget baseline; drivers and reforecasting are not implemented yet
 
 ## Tech stack
 
@@ -163,7 +204,7 @@ workforce-planning-platform-saas/
 ├── docs/                        # Phase documentation
 ├── lib/                         # Supabase clients, repositories, audit, tenant, permission and calculation services
 ├── supabase/migrations/         # Database schema, functions, triggers and RLS policies
-├── tests/                       # Unit tests for foundation and Layer 1 deterministic logic
+├── tests/                       # Unit tests for foundation, Layer 1 and Budget Baseline logic
 ├── types/                       # TypeScript domain and database types
 ├── .env.example                 # Safe environment variable template
 ├── .gitignore                   # Git exclusions for secrets and build artefacts
@@ -202,6 +243,7 @@ supabase/migrations/002_phase1_1_hardening.sql
 supabase/migrations/003_phase2_layer1_engine_fields.sql
 supabase/migrations/004_phase3_layer1_approval_lock_handoff.sql
 supabase/migrations/005_phase3_1_layer1_governance_hardening.sql
+supabase/migrations/006_phase4_budget_baseline_module.sql
 ```
 
 The migrations create and harden:
@@ -216,6 +258,7 @@ The migrations create and harden:
 - Layer 1 Phase 2 calculation support fields
 - Layer 1 Phase 3 approval, lock, snapshot and handoff support
 - Layer 1 Phase 3.1 transaction-safe lock/handoff RPC and controlled handoff transitions
+- Phase 4 budget baseline tables, monthly lines, immutable snapshots, controlled baseline RPCs and lock guards
 
 ## Local development
 

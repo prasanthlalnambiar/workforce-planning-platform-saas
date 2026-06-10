@@ -46,3 +46,20 @@ test('Layer 1 governance permissions separate submit, approve and lock authority
   assert.equal(hasPermission(['auditor'], 'layer1:read'), true);
   assert.equal(hasPermission(['auditor'], 'layer1:submit_review'), false);
 });
+
+
+test('Budget baseline permissions separate create, review and lock authority', () => {
+  assert.equal(hasPermission(['owner'], 'baseline:create'), true);
+  assert.equal(hasPermission(['admin'], 'baseline:lock'), true);
+  assert.equal(hasPermission(['finance_admin'], 'baseline:lock'), true);
+  assert.equal(hasPermission(['planner'], 'baseline:create'), true);
+  assert.equal(hasPermission(['planner'], 'baseline:lock'), false);
+  assert.equal(hasPermission(['reviewer'], 'baseline:review'), true);
+  assert.equal(hasPermission(['reviewer'], 'baseline:lock'), false);
+  assert.equal(hasPermission(['viewer'], 'baseline:create'), false);
+  assert.equal(hasPermission(['viewer'], 'baseline:lock'), false);
+  assert.equal(hasPermission(['auditor'], 'baseline:read'), true);
+  assert.equal(hasPermission(['auditor'], 'baseline:review'), false);
+  assert.equal(hasPermission(['integration_admin'], 'baseline:lock'), false);
+  assert.equal(hasPermission(['ai_admin'], 'baseline:lock'), false);
+});

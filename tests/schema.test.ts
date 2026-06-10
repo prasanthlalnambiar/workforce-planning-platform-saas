@@ -31,6 +31,9 @@ const businessTables = [
   'calculation_runs',
   'layer1_version_locks',
   'layer1_handoff_objects',
+  'budget_baselines',
+  'budget_baseline_lines',
+  'budget_baseline_snapshots',
   'audit_events'
 ];
 
@@ -105,4 +108,16 @@ test('Phase 2 Layer 1 engine fields are added to scaffolding tables', () => {
   assert.match(sql, /ADD COLUMN IF NOT EXISTS annual_budget_target numeric\(18,2\)/);
   assert.match(sql, /ADD COLUMN IF NOT EXISTS risk_flags_json jsonb/);
   assert.match(sql, /ADD COLUMN IF NOT EXISTS scenario_summary_json jsonb/);
+});
+
+
+test('Phase 4 Budget Baseline schema is present and tenant-scoped', () => {
+  for (const table of ['budget_baselines', 'budget_baseline_lines', 'budget_baseline_snapshots']) {
+    assert.match(sql, new RegExp(`CREATE TABLE public\\.${table}`));
+    assert.match(sql, new RegExp(`CREATE TABLE public\\.${table} \\([\\s\\S]*?organisation_id uuid NOT NULL`));
+    assert.match(sql, new RegExp(`ALTER TABLE public\\.${table} ENABLE ROW LEVEL SECURITY;`));
+  }
+  assert.match(sql, /CONSTRAINT budget_baselines_handoff_same_org_fk FOREIGN KEY \(organisation_id, source_layer1_handoff_id\)/);
+  assert.match(sql, /CONSTRAINT budget_baseline_lines_period_same_org_fk FOREIGN KEY \(organisation_id, period_id\)/);
+  assert.match(sql, /CONSTRAINT budget_baseline_snapshots_baseline_same_org_fk FOREIGN KEY \(organisation_id, budget_baseline_id\)/);
 });
