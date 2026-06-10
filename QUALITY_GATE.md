@@ -85,6 +85,13 @@ This development environment does not currently include the Supabase CLI, Docker
 
 Before commercial pilot use, add a live Supabase/Postgres verification job that executes the migrations against an empty database and runs RLS/RPC attack tests with real users and JWT contexts.
 
+
+## External build timeout fix
+
+The production build is intentionally separated from TypeScript and ESLint validation. The quality gate runs `npm run typecheck` and `npm run lint` before `npm run build`; Next's duplicate internal validation is disabled in `next.config.mjs` to avoid external build timeouts during the integrated `Linting and checking validity of types ...` stage.
+
+The app also forces the root layout, root redirect page and login page to dynamic Node.js rendering so build-time page data collection does not execute runtime-adjacent auth/login paths. Protected pages remain dynamic as well.
+
 ## External ZIP rule
 
 External review ZIPs must exclude:
