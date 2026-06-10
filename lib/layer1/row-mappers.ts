@@ -1,5 +1,5 @@
-import { starterScenarios } from './calculation-engine';
-import type { DemandCategory, Layer1Assumptions, Layer1DemandInput, Layer1ScenarioDefinition, ScenarioType } from './calculation-types';
+import { DEFAULT_WEEKS_PER_MONTH, starterScenarios } from './calculation-engine';
+import type { DemandCategory, DemandFrequency, Layer1Assumptions, Layer1DemandInput, Layer1ScenarioDefinition, ScenarioType } from './calculation-types';
 
 export const demandCategories: { value: DemandCategory; label: string; help: string }[] = [
   { value: 'measured_contact', label: 'Measured contact work', help: 'Calls, chat, email or other contact volumes with observable handling effort.' },
@@ -30,6 +30,11 @@ export function isDemandCategory(value: unknown): value is DemandCategory {
   return demandCategories.some((category) => category.value === value);
 }
 
+
+export function isDemandFrequency(value: unknown): value is DemandFrequency {
+  return ['monthly', 'weekly', 'daily', 'one_off'].includes(String(value));
+}
+
 export function mapDemandRows(rows: Record<string, unknown>[], sources: Record<string, unknown>[] = []): Layer1DemandInput[] {
   const sourceById = new Map(sources.map((source) => [String(source.id), source]));
   return rows.map((row) => {
@@ -39,6 +44,7 @@ export function mapDemandRows(rows: Record<string, unknown>[], sources: Record<s
       id: String(row.id ?? ''),
       category,
       workTypeLabel: String(row.work_type_label ?? row.assumption_reference ?? 'Unlabelled work'),
+      frequency: isDemandFrequency(row.frequency) ? row.frequency : 'monthly',
       sourceId: nullableString(row.source_id),
       sourceQualityScore: numberFrom(row.source_quality_score, numberFrom(source?.source_quality_score, 0)),
       volume: numberFrom(row.demand_volume),
@@ -53,6 +59,7 @@ export function mapDemandRows(rows: Record<string, unknown>[], sources: Record<s
 export function mapAssumptions(capacity?: Record<string, unknown>, cost?: Record<string, unknown>, brief?: Record<string, unknown>): Layer1Assumptions {
   return {
     workingDays: numberFrom(capacity?.working_days, 20),
+    weeksPerMonth: numberFrom(capacity?.weeks_per_month, DEFAULT_WEEKS_PER_MONTH),
     hoursPerDay: numberFrom(capacity?.hours_per_day, 7.5),
     utilisation: numberFrom(capacity?.utilisation, 0.82),
     shrinkage: numberFrom(capacity?.shrinkage, 0.18),

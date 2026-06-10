@@ -40,7 +40,7 @@ export default async function ScenarioComparisonPage({ searchParams }: { searchP
                 <div>
                   <p className="eyebrow">Deterministic comparison</p>
                   <h2>Base, pressure and efficiency cases</h2>
-                  <p>Scenario outputs are calculated from the same stored demand inputs and assumptions. No AI or approval logic is used here.</p>
+                  <p>Scenario outputs are calculated from the same stored demand inputs and assumptions after monthly frequency normalisation. No AI or approval logic is used here.</p>
                 </div>
               </div>
               {scenarios.length > 0 ? (

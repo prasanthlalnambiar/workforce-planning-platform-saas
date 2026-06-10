@@ -28,6 +28,7 @@ export default async function AssumptionsPage({ searchParams }: { searchParams?:
               <form className="form-grid" action={createLayer1AssumptionsAction}>
                 <input type="hidden" name="plan_id" value={data.plan.id} />
                 <label className="field"><span>Working days/month</span><input name="working_days" type="number" step="0.1" min="0" defaultValue={assumptions.workingDays} /></label>
+                <label className="field"><span>Weeks/month</span><input name="weeks_per_month" type="number" step="0.01" min="0" defaultValue={assumptions.weeksPerMonth} /></label>
                 <label className="field"><span>Hours/day</span><input name="hours_per_day" type="number" step="0.1" min="0" defaultValue={assumptions.hoursPerDay} /></label>
                 <label className="field"><span>Utilisation %</span><input name="utilisation" type="number" step="0.1" min="1" max="100" defaultValue={assumptions.utilisation * 100} /></label>
                 <label className="field"><span>Shrinkage %</span><input name="shrinkage" type="number" step="0.1" min="0" max="95" defaultValue={assumptions.shrinkage * 100} /></label>
@@ -43,6 +44,7 @@ export default async function AssumptionsPage({ searchParams }: { searchParams?:
               <h2>Current assumption set</h2>
               <div className="kpi-grid">
                 <div className="mini-card"><span>Working days</span><strong>{num(assumptions.workingDays, 1)}</strong></div>
+                <div className="mini-card"><span>Weeks/month</span><strong>{num(assumptions.weeksPerMonth, 2)}</strong></div>
                 <div className="mini-card"><span>Hours/day</span><strong>{num(assumptions.hoursPerDay, 1)}</strong></div>
                 <div className="mini-card"><span>Utilisation</span><strong>{percent(assumptions.utilisation)}</strong></div>
                 <div className="mini-card"><span>Shrinkage</span><strong>{percent(assumptions.shrinkage)}</strong></div>

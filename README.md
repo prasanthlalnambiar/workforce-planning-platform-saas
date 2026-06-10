@@ -1,8 +1,8 @@
 # Workforce Planning and Labour Budget Governance Platform
 
-Production Phase 1 foundation for a two-layer workforce planning and labour budget governance platform.
+Production SaaS codebase for a two-layer workforce planning and labour budget governance platform.
 
-This codebase is separate from the public consulting website. It is the SaaS application foundation for the planning product.
+This codebase is separate from the public consulting website. It is the application foundation for the planning product.
 
 ## Product model
 
@@ -14,27 +14,95 @@ The platform is designed around two governed planning layers:
 2. **Layer 2: Budget governance**  
    Budget baseline → growth drivers → efficiency plans → reforecast locks → actuals → variance → waterfall → AI advisory
 
-Phase 1 only builds the shared SaaS foundation. Layer 1 calculations, Layer 2 logic, AI, actuals ingestion, variance and waterfall reporting are intentionally not implemented yet.
+## Current implementation status
 
-## Phase 1 scope
+### Accepted foundation
 
-Implemented foundation areas:
+Phase 1.2 SaaS foundation has been implemented and accepted:
 
 - Next.js app structure
 - React and TypeScript
 - Supabase client and server setup
 - Supabase Auth foundation
-- Organisation and membership model
-- Role and permission helpers
-- Plans, fiscal years and planning periods
-- Shared dimensions foundation
-- Audit event infrastructure
-- Tenant-scoped database design
+- organisation and membership model
+- role and permission helpers
+- plans, fiscal years and planning periods
+- shared dimensions foundation
+- audit event infrastructure
+- tenant-scoped database design
 - Supabase/PostgreSQL migrations
 - Row Level Security policies
-- Placeholder navigation for future modules
-- Layer 1 database scaffolding tables
-- Unit tests for period generation, permissions, audit payloads and tenant isolation assumptions
+- protected routes and onboarding foundation
+- placeholder navigation for future modules
+
+### Implemented in Phase 2
+
+Phase 2 implements the deterministic Layer 1 demand-to-budget engine:
+
+- Layer 1 cockpit/dashboard
+- planning brief page
+- source inventory page
+- demand input page
+- capacity and cost assumptions page
+- calculation output page
+- deterministic scenario comparison page
+- isolated calculation modules outside UI components
+- monthly frequency normalisation for monthly, weekly, daily and one-off inputs
+- measured workload hours
+- estimated/project workload hours
+- hidden/internal workload hours
+- total monthly workload hours
+- required FTE
+- current supply FTE
+- FTE gap
+- annual labour cost
+- budget variance
+- source quality score
+- confidence score
+- deterministic risk flags
+- audit events for material Layer 1 create/run actions
+
+### Not implemented yet
+
+The following are deliberately not built yet:
+
+- Phase 3 approval workflow
+- Layer 1 version lock
+- Layer 1 approved handoff object creation from the UI
+- Layer 2 budget baseline module
+- driver layer
+- reforecast engine
+- actuals ingestion
+- variance reporting
+- waterfall reporting
+- AI advisory module
+
+## Layer 1 calculation notes
+
+Phase 2 normalises all demand inputs into monthly workload hours before calculating required FTE.
+
+Frequency handling:
+
+- `monthly`: volume × effort minutes ÷ 60
+- `weekly`: volume × weeks per month × effort minutes ÷ 60
+- `daily`: volume × working days × effort minutes ÷ 60
+- `one_off`: volume × effort minutes ÷ 60, treated as workload inside the selected model period
+
+Hidden/internal work and project/ad hoc work can also use direct workload hours. Those hours are normalised using the same frequency rules.
+
+Required FTE formula:
+
+```text
+required_fte = total_workload_hours / (working_days × hours_per_day × utilisation × (1 - shrinkage))
+```
+
+Annual labour cost is calculated as:
+
+```text
+required_fte × annual_loaded_cost_per_fte
+```
+
+Important: if one-off work is included, Phase 2 shows it inside the selected model period. The annual labour cost output represents the run-rate if that modelled workload level were sustained. True one-off work should be removed or separately phased before treating it as permanent budget.
 
 ## Non-negotiable product rules preserved
 
@@ -42,11 +110,12 @@ Implemented foundation areas:
 - No demo authentication as production foundation
 - No service-role key in browser code
 - Every business table includes `organisation_id`
-- Tenant scoping is enforced through repository helpers and Supabase RLS policies
-- Material actions are designed to create audit events
-- Locked planning artefacts are prepared for immutability in the database schema
-- AI is not implemented in Phase 1
-- Calculation logic is not buried in UI components
+- Tenant scoping is enforced through repository queries, database guardrails and Supabase RLS policies
+- Material actions write audit events through controlled server-side services
+- Deterministic calculations are authoritative
+- AI is not implemented in Phase 2
+- Calculation logic is isolated in testable modules and not buried in UI components
+- Phase 3 approval locks and Layer 2 handoff are not implemented in Phase 2
 
 ## Tech stack
 
@@ -56,7 +125,7 @@ Implemented foundation areas:
 - Supabase Auth
 - Supabase/PostgreSQL
 - PostgreSQL Row Level Security
-- Node test runner
+- Node test runner with `tsx`
 
 ## Folder structure
 
@@ -65,9 +134,9 @@ workforce-planning-platform-saas/
 ├── app/                         # Next.js app routes, protected screens and server actions
 ├── components/                  # Shared app shell and navigation components
 ├── docs/                        # Phase documentation
-├── lib/                         # Supabase clients, repositories, audit, tenant and permission services
+├── lib/                         # Supabase clients, repositories, audit, tenant, permission and calculation services
 ├── supabase/migrations/         # Database schema, functions, triggers and RLS policies
-├── tests/                       # Unit tests for foundation logic
+├── tests/                       # Unit tests for foundation and Layer 1 deterministic logic
 ├── types/                       # TypeScript domain and database types
 ├── .env.example                 # Safe environment variable template
 ├── .gitignore                   # Git exclusions for secrets and build artefacts
@@ -89,19 +158,24 @@ Required values:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Server-only. Required for controlled audit writes and onboarding bootstrap.
+SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
 ```
 
 Never commit `.env.local` or any file containing real secrets. Do not expose a Supabase service-role key in browser code.
 
 ## Database setup
 
-Apply the migration in:
+Apply migrations in order:
 
 ```text
 supabase/migrations/001_phase1_foundation.sql
+supabase/migrations/002_phase1_1_hardening.sql
+supabase/migrations/003_phase2_layer1_engine_fields.sql
 ```
 
-The migration creates:
+The migrations create and harden:
 
 - core SaaS tables
 - shared dimensions
@@ -109,14 +183,15 @@ The migration creates:
 - Layer 1 scaffolding tables
 - RLS helper functions
 - RLS policies
-- immutability triggers for locked Layer 1 artefacts
+- tenant-consistency foreign key guardrails
+- Layer 1 Phase 2 calculation support fields
 
 ## Local development
 
 Install dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
 Run the development server:
@@ -131,25 +206,19 @@ Run tests:
 npm test
 ```
 
-Run linting:
+Run typecheck, lint and build:
 
 ```bash
+npm run typecheck
 npm run lint
+npm run build
 ```
 
-## Current limitations
+Run audit:
 
-This is Phase 1 only. It does not yet include:
-
-- Layer 1 calculation engine
-- Layer 1 approval UI beyond scaffolding
-- Layer 2 budget baseline logic
-- driver layer logic
-- reforecast locks
-- actuals ingestion
-- variance and waterfall reporting
-- AI advisory features
-- production Supabase deployment configuration
+```bash
+npm audit
+```
 
 ## GitHub safety notes
 

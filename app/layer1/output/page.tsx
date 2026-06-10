@@ -40,6 +40,8 @@ export default async function CalculationOutputPage({ searchParams }: { searchPa
                   <StatCard label="Estimated hours" value={num(output.workload.estimatedWorkloadHours)} />
                   <StatCard label="Hidden hours" value={num(output.workload.hiddenWorkloadHours)} />
                   <StatCard label="Total hours" value={num(output.workload.totalWorkloadHours)} />
+                  <StatCard label="Recurring hours" value={num(output.workload.recurringWorkloadHours)} />
+                  <StatCard label="One-off hours" value={num(output.workload.oneOffWorkloadHours)} />
                   <StatCard label="Productive hours/FTE" value={num(output.productiveHoursPerFte)} />
                   <StatCard label="Required FTE" value={num(output.requiredFte)} />
                   <StatCard label="FTE gap" value={num(output.fteGap)} tone={output.fteGap > 0 ? 'warm' : 'green'} />
@@ -50,6 +52,7 @@ export default async function CalculationOutputPage({ searchParams }: { searchPa
                   <StatCard label="Confidence" value={`${num(output.confidenceScore, 0)}%`} />
                 </div>
               ) : <p>Add demand inputs before running a calculation.</p>}
+              {output ? <p className="small-note"><strong>Cost basis:</strong> {output.annualisationNote}</p> : null}
             </section>
             {output ? <section className="card"><h2>Risk flags</h2><div className="risk-list">{output.riskFlags.map((flag) => <article key={flag.code} className={`risk risk-${flag.severity}`}><strong>{flag.severity}</strong><span>{flag.message}</span></article>)}</div></section> : null}
             <section className="card"><h2>Saved calculation runs</h2><div className="table-wrap"><table><thead><tr><th>Created</th><th>Required FTE</th><th>Gap</th><th>Cost</th><th>Variance</th><th>Confidence</th></tr></thead><tbody>

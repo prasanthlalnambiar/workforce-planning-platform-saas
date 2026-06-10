@@ -13,6 +13,7 @@ import type { UserContext } from '../../types/models';
 import {
   demandCategories,
   isDemandCategory,
+  isDemandFrequency,
   isScenarioType,
   mapAssumptions,
   mapDemandRows,
@@ -21,7 +22,7 @@ import {
   numberFrom
 } from '../layer1/row-mappers';
 
-export { demandCategories, isDemandCategory, mapAssumptions, mapDemandRows };
+export { demandCategories, isDemandCategory, isDemandFrequency, mapAssumptions, mapDemandRows };
 
 export interface Layer1SelectedPlan {
   id: string;
@@ -138,13 +139,14 @@ export async function createSourceInventoryItem(context: UserContext, input: Rec
 export async function createDemandInput(context: UserContext, input: Record<string, unknown>) {
   requirePermission(context.roles, 'layer1:write');
   const category = isDemandCategory(input.demand_category) ? input.demand_category : 'measured_contact';
+  const frequency = isDemandFrequency(input.frequency) ? input.frequency : 'monthly';
   const supabase = await createClient();
   const payload = {
     organisation_id: context.organisationId,
     plan_id: String(input.plan_id),
     demand_category: category,
     work_type_label: String(input.work_type_label ?? '').trim(),
-    frequency: String(input.frequency ?? 'monthly'),
+    frequency,
     source_id: nullableString(input.source_id),
     demand_volume: numberFrom(input.demand_volume),
     processing_minutes: numberFrom(input.processing_minutes),
@@ -171,6 +173,7 @@ export async function createLayer1Assumptions(context: UserContext, input: Recor
     organisation_id: context.organisationId,
     plan_id: planId,
     working_days: numberFrom(input.working_days, 20),
+    weeks_per_month: numberFrom(input.weeks_per_month, 4.33),
     hours_per_day: numberFrom(input.hours_per_day, 7.5),
     utilisation: numberFrom(input.utilisation, 82) / 100,
     shrinkage: numberFrom(input.shrinkage, 18) / 100,

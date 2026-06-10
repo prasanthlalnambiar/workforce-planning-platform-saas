@@ -1,10 +1,12 @@
 export type DemandCategory = 'measured_contact' | 'measured_case' | 'hidden_internal' | 'project_ad_hoc';
+export type DemandFrequency = 'monthly' | 'weekly' | 'daily' | 'one_off';
 export type ScenarioType = 'base' | 'high_demand' | 'productivity' | 'ai_efficiency' | 'finance_constrained' | 'custom';
 
 export interface Layer1DemandInput {
   id?: string;
   category: DemandCategory;
   workTypeLabel: string;
+  frequency: DemandFrequency;
   sourceId?: string | null;
   sourceQualityScore?: number | null;
   volume?: number | null;
@@ -16,6 +18,7 @@ export interface Layer1DemandInput {
 
 export interface Layer1Assumptions {
   workingDays: number;
+  weeksPerMonth: number;
   hoursPerDay: number;
   utilisation: number;
   shrinkage: number;
@@ -46,8 +49,11 @@ export interface WorkloadBreakdown {
   measuredWorkloadHours: number;
   estimatedWorkloadHours: number;
   hiddenWorkloadHours: number;
+  recurringWorkloadHours: number;
+  oneOffWorkloadHours: number;
   totalWorkloadHours: number;
   hiddenWorkShare: number;
+  oneOffWorkShare: number;
 }
 
 export interface Layer1RiskFlag {
@@ -76,4 +82,5 @@ export interface Layer1CalculationOutput {
   sourceQualityScore: number;
   confidenceScore: number;
   riskFlags: Layer1RiskFlag[];
+  annualisationNote: string;
 }

@@ -10,6 +10,7 @@ ALTER TABLE public.demand_inputs
     CHECK (frequency IN ('monthly', 'weekly', 'daily', 'one_off'));
 
 ALTER TABLE public.capacity_assumptions
+  ADD COLUMN IF NOT EXISTS weeks_per_month numeric(8,2) NOT NULL DEFAULT 4.33,
   ADD COLUMN IF NOT EXISTS current_supply_fte numeric(12,2) NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS assumption_notes text;
 
