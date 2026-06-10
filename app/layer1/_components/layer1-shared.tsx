@@ -16,7 +16,8 @@ const layer1Links = [
   ['Demand inputs', '/layer1/demand'],
   ['Assumptions', '/layer1/assumptions'],
   ['Output', '/layer1/output'],
-  ['Scenarios', '/layer1/scenarios']
+  ['Scenarios', '/layer1/scenarios'],
+  ['Review & handoff', '/layer1/review']
 ] as const;
 
 export function Layer1Subnav({ planId }: { planId?: string }) {

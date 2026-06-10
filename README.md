@@ -62,13 +62,26 @@ Phase 2 implements the deterministic Layer 1 demand-to-budget engine:
 - deterministic risk flags
 - audit events for material Layer 1 create/run actions
 
+### Implemented in Phase 3
+
+Phase 3 converts the Layer 1 engine from a calculator into a governed planning input:
+
+- Layer 1 review and approval screen
+- submit-for-review workflow
+- approval workflow for authorised reviewer, finance admin, admin and owner roles
+- immutable Layer 1 version lock
+- approved snapshot JSON containing calculation outputs, assumptions, sources, demand inputs, risk flags and scenario summary
+- checksum for locked Layer 1 snapshots
+- Layer 1 handoff object for future Layer 2 baseline setup
+- handoff status management through `ready_for_layer2`
+- database immutability guards for governed calculation runs, version locks and handoff payloads
+- audit events for submit, approval request, approval, lock, handoff creation and handoff readiness
+
 ### Not implemented yet
 
 The following are deliberately not built yet:
 
-- Phase 3 approval workflow
-- Layer 1 version lock
-- Layer 1 approved handoff object creation from the UI
+- Layer 2 baseline import from the approved Layer 1 handoff
 - Layer 2 budget baseline module
 - driver layer
 - reforecast engine
@@ -113,9 +126,10 @@ Important: if one-off work is included, Phase 2 shows it inside the selected mod
 - Tenant scoping is enforced through repository queries, database guardrails and Supabase RLS policies
 - Material actions write audit events through controlled server-side services
 - Deterministic calculations are authoritative
-- AI is not implemented in Phase 2
+- AI is not implemented in Phase 3
 - Calculation logic is isolated in testable modules and not buried in UI components
-- Phase 3 approval locks and Layer 2 handoff are not implemented in Phase 2
+- Locked Layer 1 snapshots and handoff payloads are immutable
+- Phase 3 stops at `ready_for_layer2`; Layer 2 baseline import is not implemented yet
 
 ## Tech stack
 
@@ -173,6 +187,7 @@ Apply migrations in order:
 supabase/migrations/001_phase1_foundation.sql
 supabase/migrations/002_phase1_1_hardening.sql
 supabase/migrations/003_phase2_layer1_engine_fields.sql
+supabase/migrations/004_phase3_layer1_approval_lock_handoff.sql
 ```
 
 The migrations create and harden:
@@ -185,6 +200,7 @@ The migrations create and harden:
 - RLS policies
 - tenant-consistency foreign key guardrails
 - Layer 1 Phase 2 calculation support fields
+- Layer 1 Phase 3 approval, lock, snapshot and handoff support
 
 ## Local development
 

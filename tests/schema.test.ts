@@ -74,6 +74,28 @@ test('Layer 1 immutable payload guards allow only controlled status movement', (
   assert.match(sql, /locked calculation references cannot be changed/i);
 });
 
+test('Phase 3 Layer 1 approval, lock and handoff schema is present', () => {
+  assert.match(sql, /submitted_for_review/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS submitted_by uuid REFERENCES public\.profiles\(id\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS approved_by uuid REFERENCES public\.profiles\(id\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS approved_snapshot_json jsonb NOT NULL DEFAULT '\{\}'::jsonb/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS approved_calculation_run_id uuid/);
+  assert.match(sql, /ready_for_layer2/);
+});
+
+test('Phase 3 protects governed Layer 1 calculation and handoff payloads', () => {
+  assert.match(sql, /protect_calculation_run_governance_update/);
+  assert.match(sql, /Governed Layer 1 calculation payload cannot be changed/);
+  assert.match(sql, /Governed Layer 1 calculation runs cannot be deleted/);
+  assert.match(sql, /Approved handoff snapshot JSON cannot be changed/);
+  assert.match(sql, /Layer 1 handoff status transition is not allowed/);
+});
+
+test('Phase 3 lock and handoff tables enforce tenant-consistent references', () => {
+  assert.match(sql, /FOREIGN KEY \(organisation_id, fiscal_year_id\) REFERENCES public\.fiscal_years\(organisation_id, id\)/);
+  assert.match(sql, /FOREIGN KEY \(organisation_id, approved_calculation_run_id\) REFERENCES public\.calculation_runs\(organisation_id, id\)/);
+});
+
 
 test('Phase 2 Layer 1 engine fields are added to scaffolding tables', () => {
   assert.match(sql, /ADD COLUMN IF NOT EXISTS demand_category text NOT NULL DEFAULT 'measured_contact'/);
