@@ -42,6 +42,22 @@ test('local verification also checks build output through route diagnostics', ()
   assert.match(verifyScript, /scripts\/inspect-routes\.mjs/);
 });
 
+test('local verification runs mandatory gates in order and exits cleanly after audit', () => {
+  const steps = ['Unit and contract tests', 'TypeScript typecheck', 'Lint', 'Production build', 'Route diagnostics', 'Dependency audit'];
+  for (const step of steps) assert.match(verifyScript, new RegExp(step));
+  assert.ok(verifyScript.indexOf('Unit and contract tests') < verifyScript.indexOf('TypeScript typecheck'));
+  assert.ok(verifyScript.indexOf('TypeScript typecheck') < verifyScript.indexOf('Lint'));
+  assert.ok(verifyScript.indexOf('Lint') < verifyScript.indexOf('Production build'));
+  assert.ok(verifyScript.indexOf('Production build') < verifyScript.indexOf('Route diagnostics'));
+  assert.ok(verifyScript.indexOf('Route diagnostics') < verifyScript.lastIndexOf('runNpmAudit()'));
+  assert.match(verifyScript, /runCaptured\('Dependency audit', npmCommand, \['audit', '--audit-level=low'\]\)/);
+  assert.match(verifyScript, /stdio:\s*\['ignore', 'pipe', 'pipe'\]/);
+  assert.match(verifyScript, /timeout:\s*120_000/);
+  assert.match(verifyScript, /npm_config_update_notifier:\s*'false'/);
+  assert.match(verifyScript, /process\.exit\(0\);/);
+  assert.doesNotMatch(verifyScript, /npm_execpath/);
+});
+
 
 test('Next internal build validation is separated from mandatory standalone gates', () => {
   assert.match(nextConfig, /typescript:\s*{\s*ignoreBuildErrors:\s*true\s*}/s);

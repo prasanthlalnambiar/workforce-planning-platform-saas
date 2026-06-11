@@ -37,6 +37,7 @@ h1, h2, h3 { margin: 0; font-family: var(--serif); font-weight: 500; letter-spac
 h1 { font-size: clamp(2.2rem, 4vw, 4.2rem); } h2 { font-size: clamp(1.45rem, 2.1vw, 2.1rem); }
 p { color: var(--muted); line-height: 1.62; } .lede { max-width: 860px; margin: 12px 0 0; font-size: 1.02rem; }
 .grid-2 { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
 .grid-4 { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; }
 .metric { padding: 20px; border: 1px solid var(--line); border-radius: 22px; background: var(--paper); box-shadow: var(--shadow); }
 .metric span { display: block; color: var(--muted); font-size: .82rem; } .metric strong { display: block; margin-top: 8px; font-size: 2rem; }
@@ -47,9 +48,10 @@ th, td { padding: 13px 14px; border-bottom: 1px solid #ebe4da; text-align: left;
 .field { display: grid; gap: 7px; font-weight: 700; } input, textarea, select { width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; background: #fff; }
 .form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; } .wide { grid-column: 1 / -1; }
 .button { border: 0; border-radius: 999px; padding: 11px 16px; font-weight: 850; background: var(--navy); color: #fff; cursor: pointer; } .button-secondary { background: #f0e5d8; color: var(--navy); }
+.inline-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .login-shell { min-height: 100vh; display: grid; place-items: center; padding: 28px; } .login-card { width: min(560px, 100%); }
 .placeholder { border-left: 5px solid var(--warm); }
-@media (max-width: 980px) { .layout, .grid-2, .grid-4, .form-grid { grid-template-columns: 1fr; } .sidebar { min-height: auto; } .nav { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 980px) { .layout, .grid-2, .grid-3, .grid-4, .form-grid { grid-template-columns: 1fr; } .sidebar { min-height: auto; } .nav { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 .small-note { font-size: .88rem; color: var(--muted); }
 
 .subnav { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 20px; background: rgba(255,253,249,.72); box-shadow: var(--shadow); }

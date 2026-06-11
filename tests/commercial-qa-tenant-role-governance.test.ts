@@ -71,10 +71,11 @@ test('governance attack paths are blocked by database triggers and service-only 
   assert.match(migrations, /Locked budget baseline header cannot be changed/);
   assert.match(migrations, /Locked budget baseline lines cannot be edited/);
   assert.match(migrations, /Budget baseline snapshots are immutable and cannot be updated or deleted/);
-  assert.match(migrations, /Reviewed budget driver sets cannot be changed/);
-  assert.match(migrations, /Reviewed budget drivers cannot be changed/);
-  assert.match(migrations, /Reviewed budget driver monthly impacts cannot be changed/);
+  assert.match(migrations, /Only draft budget drivers can be edited directly; approved drivers must be superseded/);
+  assert.match(migrations, /Only proposed budget drivers can be approved/);
+  assert.match(migrations, /Approved budget drivers must be superseded, not voided/);
   assert.match(migrations, /GRANT EXECUTE ON FUNCTION public\.create_layer1_lock_and_handoff[\s\S]*TO service_role/);
   assert.match(migrations, /GRANT EXECUTE ON FUNCTION public\.lock_budget_baseline[\s\S]*TO service_role/);
   assert.match(migrations, /GRANT EXECUTE ON FUNCTION public\.create_budget_driver[\s\S]*TO service_role/);
+  assert.match(migrations, /GRANT EXECUTE ON FUNCTION public\.transition_budget_driver_lifecycle[\s\S]*TO service_role/);
 });

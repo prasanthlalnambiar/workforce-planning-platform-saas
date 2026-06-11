@@ -172,14 +172,16 @@ Monthly phasing rules:
 
 ## Driver Layer notes
 
-Phase 5 converts a locked budget baseline into governed growth, efficiency and management adjustment drivers.
+Phase 5 converts a locked budget baseline into governed growth, efficiency, cost change, supply change and management adjustment drivers.
 
 Driver rules:
 
-- driver sets can only be created from locked immutable budget baselines
+- driver packs can only be created from locked immutable budget baselines and group evidence for review
+- individual drivers carry the source-of-truth lifecycle: `draft`, `proposed`, `approved`, `superseded`, `voided`
+- proposed drivers are scenario-only and do not feed official impact
+- approved drivers feed official driver impact and become immutable
+- approved drivers must be superseded rather than silently edited or voided
 - drivers are monthly phased across the 12 baseline periods
-- driver impacts are planning assumptions, not official forecast values
-- reviewed driver sets, drivers and monthly impacts are immutable evidence
 - material driver actions are routed through service-role RPCs and audit events
 - Phase 5 does not create reforecast locks, actuals, variance, waterfall or AI outputs
 
@@ -223,7 +225,7 @@ Important: if one-off work is included, Phase 2 shows it inside the selected mod
 - Calculation logic is isolated in testable modules and not buried in UI components
 - Locked Layer 1 snapshots and handoff payloads are immutable
 - Locked budget baseline headers, lines and snapshots are immutable
-- Reviewed driver sets, drivers and monthly impacts are immutable
+- Approved drivers and official monthly impact rows are immutable; approved drivers must be superseded rather than silently edited
 - Phase 5 stops at the driver layer; reforecast locks, actuals, variance, waterfall and AI are not implemented yet
 
 ## Tech stack
@@ -302,7 +304,7 @@ The migrations create and harden:
 - Layer 1 Phase 3 approval, lock, snapshot and handoff support
 - Layer 1 Phase 3.1 transaction-safe lock/handoff RPC and controlled handoff transitions
 - Phase 4 budget baseline tables, monthly lines, immutable snapshots, controlled baseline RPCs and lock guards
-- Phase 5 driver sets, structured drivers, monthly impacts, review immutability and controlled driver RPCs
+- Phase 5 driver packs, structured driver lifecycle, monthly impact phasing, approved-driver immutability and controlled driver RPCs
 
 ## Local development
 

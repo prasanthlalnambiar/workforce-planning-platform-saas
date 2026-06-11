@@ -12,6 +12,7 @@ const sql = readdirSync(migrationsDir)
 const phase5Sql = readFileSync(new URL('../supabase/migrations/008_phase5_driver_layer.sql', import.meta.url), 'utf8');
 const repository = readFileSync(new URL('../lib/repositories/budget-drivers.ts', import.meta.url), 'utf8');
 const page = readFileSync(new URL('../app/drivers/page.tsx', import.meta.url), 'utf8');
+const detailPage = readFileSync(new URL('../app/drivers/[driverId]/page.tsx', import.meta.url), 'utf8');
 
 test('Phase 5 driver layer schema is present and tenant scoped', () => {
   for (const table of ['budget_driver_sets', 'budget_drivers', 'budget_driver_monthly_impacts']) {
@@ -25,6 +26,9 @@ test('Phase 5 driver layer schema is present and tenant scoped', () => {
   assert.match(sql, /CONSTRAINT budget_drivers_evidence_quality_score_range CHECK \(evidence_quality_score IS NULL OR evidence_quality_score BETWEEN 0 AND 100\)/);
   assert.match(sql, /CONSTRAINT budget_driver_impacts_baseline_line_same_org_fk FOREIGN KEY \(organisation_id, budget_baseline_line_id\)/);
   assert.match(sql, /CONSTRAINT budget_driver_impacts_period_same_org_fk FOREIGN KEY \(organisation_id, period_id\)/);
+  assert.match(phase5Sql, /driver_category text NOT NULL CHECK \(driver_category IN \(\s*'growth',\s*'efficiency',\s*'cost_change',\s*'supply_change',\s*'management_adjustment'/s);
+  assert.match(phase5Sql, /status text NOT NULL DEFAULT 'draft' CHECK \(status IN \('draft', 'proposed', 'approved', 'superseded', 'voided'\)\)/);
+  assert.match(phase5Sql, /phasing_method text NOT NULL DEFAULT 'straight_line' CHECK \(phasing_method IN \('straight_line', 'ramp_up', 'ramp_down', 'one_off'\)\)/);
 });
 
 test('driver sets can only be sourced from locked immutable budget baselines', () => {
@@ -38,7 +42,8 @@ test('driver writes are controlled service-role RPCs with 12 monthly impacts', (
   for (const signature of [
     'create_budget_driver_set_from_baseline\\(uuid, uuid, uuid, jsonb, text\\)',
     'create_budget_driver\\(uuid, uuid, uuid, jsonb, jsonb, text\\)',
-    'review_budget_driver_set\\(uuid, uuid, uuid, text\\)'
+    'review_budget_driver_set\\(uuid, uuid, uuid, text\\)',
+    'transition_budget_driver_lifecycle\\(uuid, uuid, uuid, text, jsonb, text\\)'
   ]) {
     assert.match(sql, new RegExp(`REVOKE ALL ON FUNCTION public\\.${signature} FROM anon, authenticated;`));
     assert.match(sql, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${signature} TO service_role;`));
@@ -51,14 +56,25 @@ test('driver writes are controlled service-role RPCs with 12 monthly impacts', (
   assert.match(repository, /phaseDriverImpact/);
 });
 
-test('reviewed driver sets and impacts become immutable evidence, not forecast locks', () => {
-  assert.match(phase5Sql, /review_budget_driver_set/);
-  assert.match(phase5Sql, /Reviewed budget driver sets cannot be changed/);
-  assert.match(phase5Sql, /Reviewed budget drivers cannot be changed/);
-  assert.match(phase5Sql, /Reviewed budget driver monthly impacts cannot be changed/);
-  assert.match(phase5Sql, /'budget_driver_set\.reviewed'/);
+test('driver lifecycle governs proposed scenario-only and approved official impact', () => {
+  assert.match(phase5Sql, /transition_budget_driver_lifecycle/);
+  assert.match(phase5Sql, /Only draft budget drivers can be proposed/);
+  assert.match(phase5Sql, /Only proposed budget drivers can be approved/);
+  assert.match(phase5Sql, /Only approved budget drivers can be superseded/);
+  assert.match(phase5Sql, /Approved budget drivers must be superseded, not voided/);
+  assert.match(phase5Sql, /impact_treatment = 'official_impact'/);
+  assert.match(phase5Sql, /impact_treatment = 'scenario_preview'/);
+  assert.match(phase5Sql, /drivers\.status = 'approved'/);
+  assert.match(phase5Sql, /drivers\.status = 'proposed'/);
+  assert.match(phase5Sql, /Only draft budget drivers can be edited directly; approved drivers must be superseded/);
+  for (const event of ['budget_driver.proposed', 'budget_driver.approved', 'budget_driver.superseded', 'budget_driver.voided']) {
+    assert.match(phase5Sql, new RegExp(event.replace('.', '\\.')));
+  }
   assert.doesNotMatch(phase5Sql, /CREATE TABLE public\.(reforecast|actuals|variance|waterfall|ai)/);
   assert.match(page, /does not create reforecast locks, actuals, variance, waterfall or AI outputs/);
+  assert.match(page, /Proposed drivers are scenario-only until approved/);
+  assert.match(detailPage, /Proposed drivers are scenario-only and do not feed official impact/);
+  assert.match(detailPage, /Approved drivers feed official driver impact/);
 });
 
 test('driver layer keeps browser writes out of business tables', () => {

@@ -62,7 +62,8 @@ test('service-role-only governance RPCs are not executable by anon or authentica
     'lock_budget_baseline\\(uuid, uuid, uuid, uuid, uuid, jsonb, text, text\\)',
     'create_budget_driver_set_from_baseline\\(uuid, uuid, uuid, jsonb, text\\)',
     'create_budget_driver\\(uuid, uuid, uuid, jsonb, jsonb, text\\)',
-    'review_budget_driver_set\\(uuid, uuid, uuid, text\\)'
+    'review_budget_driver_set\\(uuid, uuid, uuid, text\\)',
+    'transition_budget_driver_lifecycle\\(uuid, uuid, uuid, text, jsonb, text\\)'
   ];
 
   for (const signature of serviceOnlyFunctions) {

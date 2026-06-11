@@ -4,10 +4,18 @@ import { join } from 'node:path';
 
 const isWindows = process.platform === 'win32';
 const bin = (name) => join(process.cwd(), 'node_modules', '.bin', `${name}${isWindows ? '.cmd' : ''}`);
+const deterministicEnv = {
+  ...process.env,
+  CI: process.env.CI ?? 'true',
+  NEXT_TELEMETRY_DISABLED: '1',
+  npm_config_audit_level: 'low',
+  npm_config_fund: 'false',
+  npm_config_update_notifier: 'false'
+};
 
 function run(label, command, args, options = {}) {
   console.log(`\n▶ ${label}`);
-  const result = spawnSync(command, args, { stdio: 'inherit', shell: false, ...options });
+  const result = spawnSync(command, args, { stdio: 'inherit', shell: false, env: deterministicEnv, ...options });
   if (result.error) {
     console.error(`\n${label} failed to start: ${result.error.message}`);
     process.exit(1);
@@ -27,15 +35,31 @@ function runLocalBin(label, name, args, options = {}) {
   run(label, command, args, options);
 }
 
-function runNpmAudit() {
-  const npmExecPath = process.env.npm_execpath;
-  if (npmExecPath && existsSync(npmExecPath)) {
-    run('Dependency audit', process.execPath, [npmExecPath, 'audit', '--audit-level=low']);
-    return;
+function runCaptured(label, command, args, options = {}) {
+  console.log(`\n▶ ${label}`);
+  const result = spawnSync(command, args, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    encoding: 'utf8',
+    shell: false,
+    timeout: 120_000,
+    env: deterministicEnv,
+    ...options
+  });
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  if (result.error) {
+    console.error(`\n${label} failed to start or finish deterministically: ${result.error.message}`);
+    process.exit(1);
   }
+  if (result.status !== 0) {
+    console.error(`\n${label} failed with exit code ${result.status}`);
+    process.exit(result.status ?? 1);
+  }
+}
 
+function runNpmAudit() {
   const npmCommand = isWindows ? 'npm.cmd' : 'npm';
-  run('Dependency audit', npmCommand, ['audit', '--audit-level=low']);
+  runCaptured('Dependency audit', npmCommand, ['audit', '--audit-level=low']);
 }
 
 const testFiles = readdirSync(join(process.cwd(), 'tests'))
@@ -50,7 +74,7 @@ console.log('\n▶ Production build');
 const buildResult = spawnSync(process.execPath, ['scripts/build.mjs'], {
   encoding: 'utf8',
   shell: false,
-  env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
+  env: deterministicEnv,
   maxBuffer: 1024 * 1024 * 50
 });
 const buildOutput = `${buildResult.stdout || ''}${buildResult.stderr || ''}`;
@@ -67,3 +91,4 @@ if (buildResult.status !== 0) {
 }
 run('Route diagnostics', process.execPath, ['scripts/inspect-routes.mjs', '--build-output', 'build-output.log']);
 runNpmAudit();
+process.exit(0);

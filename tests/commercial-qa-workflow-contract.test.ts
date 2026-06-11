@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { calculateLayer1Output, compareLayer1Scenarios, starterScenarios } from '../lib/layer1/calculation-engine';
 import { buildLayer1HandoffPayload, buildLayer1VersionSnapshot, checksumLayer1Snapshot } from '../lib/layer1/governance';
 import { annualsFromLayer1Handoff, buildBudgetBaselineSnapshot, checkBaselineReconciliation, checksumBudgetBaselineSnapshot, createStraightLineBaselineLines, type BudgetPlanningPeriod } from '../lib/baseline/baseline-engine';
-import { phaseDriverImpact, summariseDriverImpacts } from '../lib/drivers/driver-engine';
+import { driverImpactTreatment, phaseDriverImpact, summariseDriverImpacts, summariseDriverPortfolio } from '../lib/drivers/driver-engine';
 import type { Layer1Assumptions, Layer1DemandInput } from '../lib/layer1/calculation-types';
 
 function twelvePeriods(): BudgetPlanningPeriod[] {
@@ -161,6 +161,14 @@ test('Phase 1 to Phase 5 workflow contract preserves deterministic evidence thro
   assert.equal(driverSummary.totalLabourCostDelta, -220_000);
   assert.equal(driverSummary.totalRequiredFteDelta, -2.2);
   assert.equal(driverSummary.totalWorkloadHoursDelta, -1600);
+  const portfolio = summariseDriverPortfolio([
+    { status: 'proposed', impacts: driverImpacts },
+    { status: 'approved', impacts: driverImpacts }
+  ]);
+  assert.equal(driverImpactTreatment('proposed'), 'scenario_preview');
+  assert.equal(driverImpactTreatment('approved'), 'official_impact');
+  assert.equal(portfolio.proposedBudgetDelta, -250_000);
+  assert.equal(portfolio.officialBudgetDelta, -250_000);
   assert.equal((finalSnapshot.baseline as Record<string, unknown>).status, 'locked');
 });
 
@@ -173,6 +181,11 @@ test('blocked-path contract prevents non-ready handoffs, locked baseline edits a
   const lockedBaseline = { status: 'locked', is_immutable: true };
   assert.equal(lockedBaseline.status === 'locked' || lockedBaseline.is_immutable === true, true);
 
-  const reviewedDriverSet = { status: 'reviewed', is_immutable: true };
-  assert.equal(reviewedDriverSet.status === 'reviewed' && reviewedDriverSet.is_immutable === true, true);
+  const proposedDriver = { status: 'proposed', treatment: driverImpactTreatment('proposed') };
+  const approvedDriver = { status: 'approved', treatment: driverImpactTreatment('approved'), is_immutable: true };
+  const voidedDriver = { status: 'voided', treatment: driverImpactTreatment('voided') };
+  assert.equal(proposedDriver.treatment, 'scenario_preview');
+  assert.equal(approvedDriver.treatment, 'official_impact');
+  assert.equal(approvedDriver.is_immutable, true);
+  assert.equal(voidedDriver.treatment, 'excluded');
 });

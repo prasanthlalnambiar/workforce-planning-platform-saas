@@ -4,10 +4,13 @@ import {
   isDriverCategory,
   isDriverDirection,
   isDriverImpactBasis,
+  isDriverPhasingMethod,
   isDriverRiskRating,
+  isDriverStatus,
   phaseDriverImpact,
   signedDriverValue,
   type DriverDirection,
+  type DriverPhasingMethod,
   type DriverPlanningPeriod
 } from '../drivers/driver-engine';
 import { hasPermission, requirePermission } from '../permissions/permissions';
@@ -23,7 +26,26 @@ export interface DriverDashboardData {
   driverSets: Record<string, unknown>[];
   drivers: Record<string, unknown>[];
   monthlyImpacts: Record<string, unknown>[];
+  officialSummary: DriverSummary;
+  proposedSummary: DriverSummary;
 }
+
+export interface DriverDetailData {
+  driver: Record<string, unknown>;
+  driverSet: Record<string, unknown> | null;
+  baseline: Record<string, unknown> | null;
+  monthlyImpacts: Record<string, unknown>[];
+  auditEvents: Record<string, unknown>[];
+}
+
+export interface DriverSummary {
+  budgetDelta: number;
+  labourCostDelta: number;
+  requiredFteDelta: number;
+  workloadHoursDelta: number;
+}
+
+type DriverLifecycleStatus = 'proposed' | 'approved' | 'superseded' | 'voided';
 
 function nullableString(value: unknown): string | null {
   const text = String(value ?? '').trim();
@@ -54,9 +76,26 @@ function impactBasis(value: unknown) {
   return isDriverImpactBasis(text) ? text : 'multi_metric';
 }
 
+function phasingMethod(value: unknown): DriverPhasingMethod {
+  const text = String(value ?? 'straight_line');
+  return isDriverPhasingMethod(text) ? text : 'straight_line';
+}
+
+function oneOffPeriodIndex(value: unknown): number | undefined {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return undefined;
+  return Math.min(Math.max(Math.trunc(parsed) - 1, 0), 11);
+}
+
 function driverCategory(value: unknown) {
   const text = String(value ?? '');
   if (!isDriverCategory(text)) throw new Error('Invalid driver category');
+  return text;
+}
+
+function lifecycleStatus(value: unknown): DriverLifecycleStatus {
+  const text = String(value ?? '');
+  if (!isDriverStatus(text) || text === 'draft') throw new Error('Invalid driver lifecycle transition');
   return text;
 }
 
@@ -81,6 +120,19 @@ async function listBaselinePeriods(context: UserContext, baselineId: string): Pr
   return (data ?? []).map((row) => mapBaselineLine(row));
 }
 
+function emptySummary(): DriverSummary {
+  return { budgetDelta: 0, labourCostDelta: 0, requiredFteDelta: 0, workloadHoursDelta: 0 };
+}
+
+function summariseRows(rows: Record<string, unknown>[]): DriverSummary {
+  return rows.reduce((summary, row) => ({
+    budgetDelta: summary.budgetDelta + numberFrom(row.budget_delta),
+    labourCostDelta: summary.labourCostDelta + numberFrom(row.labour_cost_delta),
+    requiredFteDelta: summary.requiredFteDelta + numberFrom(row.required_fte_delta),
+    workloadHoursDelta: summary.workloadHoursDelta + numberFrom(row.workload_hours_delta)
+  }), emptySummary());
+}
+
 export async function getBudgetDriverDashboard(context: UserContext): Promise<DriverDashboardData> {
   requirePermission(context.roles, 'driver:read');
   const supabase = await createClient();
@@ -101,7 +153,38 @@ export async function getBudgetDriverDashboard(context: UserContext): Promise<Dr
     lockedBaselines: lockedBaselines.data ?? [],
     driverSets: driverSets.data ?? [],
     drivers: drivers.data ?? [],
-    monthlyImpacts: monthlyImpacts.data ?? []
+    monthlyImpacts: monthlyImpacts.data ?? [],
+    officialSummary: summariseRows((monthlyImpacts.data ?? []).filter((impact) => String(impact.impact_treatment) === 'official_impact')),
+    proposedSummary: summariseRows((monthlyImpacts.data ?? []).filter((impact) => String(impact.impact_treatment) === 'scenario_preview'))
+  };
+}
+
+export async function getBudgetDriverDetail(context: UserContext, driverId: string): Promise<DriverDetailData> {
+  requirePermission(context.roles, 'driver:read');
+  const supabase = await createClient();
+  const { data: driver, error: driverError } = await supabase
+    .from('budget_drivers')
+    .select('*')
+    .eq('organisation_id', context.organisationId)
+    .eq('id', driverId)
+    .single();
+  if (driverError) throw driverError;
+
+  const [driverSet, baseline, monthlyImpacts, auditEvents] = await Promise.all([
+    supabase.from('budget_driver_sets').select('*').eq('organisation_id', context.organisationId).eq('id', String(driver.driver_set_id)).maybeSingle(),
+    supabase.from('budget_baselines').select('*').eq('organisation_id', context.organisationId).eq('id', String(driver.budget_baseline_id)).maybeSingle(),
+    supabase.from('budget_driver_monthly_impacts').select('*').eq('organisation_id', context.organisationId).eq('budget_driver_id', driverId).order('period_start', { ascending: true }),
+    supabase.from('audit_events').select('*').eq('organisation_id', context.organisationId).eq('entity_type', 'budget_driver').eq('entity_id', driverId).order('created_at', { ascending: false }).limit(20)
+  ]);
+  for (const result of [driverSet, baseline, monthlyImpacts, auditEvents]) {
+    if (result.error) throw result.error;
+  }
+  return {
+    driver,
+    driverSet: driverSet.data ?? null,
+    baseline: baseline.data ?? null,
+    monthlyImpacts: monthlyImpacts.data ?? [],
+    auditEvents: auditEvents.data ?? []
   };
 }
 
@@ -157,11 +240,14 @@ export async function createBudgetDriver(context: UserContext, input: Record<str
     throw new Error('At least one driver impact value is required');
   }
 
+  const selectedPhasingMethod = phasingMethod(input.phasing_method);
   const monthlyImpacts = phaseDriverImpact(periods, {
     annualBudgetDelta,
     annualLabourCostDelta,
     annualRequiredFteDelta,
     annualWorkloadHoursDelta,
+    phasingMethod: selectedPhasingMethod,
+    oneOffPeriodIndex: oneOffPeriodIndex(input.one_off_period_number),
     notes: nullableString(input.impact_notes)
   });
   const admin = createAdminClient();
@@ -174,6 +260,7 @@ export async function createBudgetDriver(context: UserContext, input: Record<str
       driver_category: driverCategory(input.driver_category),
       driver_direction: direction,
       impact_basis: impactBasis(input.impact_basis),
+      phasing_method: selectedPhasingMethod,
       annual_budget_delta: annualBudgetDelta,
       annual_labour_cost_delta: annualLabourCostDelta,
       annual_required_fte_delta: annualRequiredFteDelta,
@@ -181,7 +268,8 @@ export async function createBudgetDriver(context: UserContext, input: Record<str
       confidence_score: numberFrom(input.confidence_score, 70),
       evidence_quality_score: numberFrom(input.evidence_quality_score, 70),
       risk_rating: riskRating(input.risk_rating),
-      rationale: nullableString(input.rationale)
+      rationale: nullableString(input.rationale),
+      supersedes_driver_id: nullableString(input.supersedes_driver_id)
     }),
     impact_payloads: toJson(monthlyImpacts.map((impact) => ({
       budget_baseline_line_id: impact.budgetBaselineLineId,
@@ -210,6 +298,28 @@ export async function reviewBudgetDriverSet(context: UserContext, driverSetId: s
     target_driver_set_id: driverSetId,
     target_actor_user_id: context.userId,
     review_reason: notes ?? 'Budget driver set reviewed'
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function transitionBudgetDriverLifecycle(context: UserContext, input: Record<string, unknown>) {
+  const nextStatus = lifecycleStatus(input.next_status);
+  if (nextStatus === 'proposed') requirePermission(context.roles, 'driver:write');
+  else requirePermission(context.roles, 'driver:review');
+
+  const driverId = String(input.driver_id ?? '');
+  if (!driverId) throw new Error('Driver is required');
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc('transition_budget_driver_lifecycle', {
+    target_organisation_id: context.organisationId,
+    target_budget_driver_id: driverId,
+    target_actor_user_id: context.userId,
+    next_status: nextStatus,
+    transition_payload: toJson({
+      superseded_by_driver_id: nullableString(input.superseded_by_driver_id)
+    }),
+    transition_reason: nullableString(input.transition_reason) ?? `Budget driver moved to ${nextStatus}`
   });
   if (error) throw error;
   return data;

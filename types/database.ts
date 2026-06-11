@@ -168,6 +168,17 @@ export interface Database {
         };
         Returns: Json;
       };
+      transition_budget_driver_lifecycle: {
+        Args: {
+          target_organisation_id: string;
+          target_budget_driver_id: string;
+          target_actor_user_id: string;
+          next_status: string;
+          transition_payload?: Json;
+          transition_reason?: string | null;
+        };
+        Returns: Json;
+      };
       refresh_budget_driver_set_totals: {
         Args: {
           target_organisation_id: string;

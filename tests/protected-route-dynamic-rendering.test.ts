@@ -20,6 +20,7 @@ const protectedPages = [
   'app/baseline/page.tsx',
   'app/baseline/[baselineId]/page.tsx',
   'app/drivers/page.tsx',
+  'app/drivers/[driverId]/page.tsx',
   'app/reforecast/page.tsx',
   'app/actuals/page.tsx',
   'app/variance/page.tsx',
