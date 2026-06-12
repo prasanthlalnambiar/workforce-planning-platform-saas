@@ -11,8 +11,11 @@ const sql = readdirSync(migrationsDir)
   .join('\n');
 const phase5Sql = readFileSync(new URL('../supabase/migrations/008_phase5_driver_layer.sql', import.meta.url), 'utf8');
 const repository = readFileSync(new URL('../lib/repositories/budget-drivers.ts', import.meta.url), 'utf8');
+const readRepository = readFileSync(new URL('../lib/repositories/budget-drivers-read.ts', import.meta.url), 'utf8');
+const mutationRepository = readFileSync(new URL('../lib/repositories/budget-drivers-mutations.ts', import.meta.url), 'utf8');
 const page = readFileSync(new URL('../app/drivers/page.tsx', import.meta.url), 'utf8');
 const detailPage = readFileSync(new URL('../app/drivers/[driverId]/page.tsx', import.meta.url), 'utf8');
+const actions = readFileSync(new URL('../app/drivers/actions.ts', import.meta.url), 'utf8');
 
 test('Phase 5 driver layer schema is present and tenant scoped', () => {
   for (const table of ['budget_driver_sets', 'budget_drivers', 'budget_driver_monthly_impacts']) {
@@ -35,7 +38,7 @@ test('driver sets can only be sourced from locked immutable budget baselines', (
   assert.match(phase5Sql, /source_baseline\.status <> 'locked'/);
   assert.match(phase5Sql, /source_baseline\.is_immutable IS DISTINCT FROM true/);
   assert.match(phase5Sql, /Only locked immutable budget baselines can source budget driver sets/);
-  assert.match(repository, /\.rpc\('create_budget_driver_set_from_baseline'/);
+  assert.match(mutationRepository, /\.rpc\('create_budget_driver_set_from_baseline'/);
 });
 
 test('driver writes are controlled service-role RPCs with 12 monthly impacts', () => {
@@ -52,8 +55,8 @@ test('driver writes are controlled service-role RPCs with 12 monthly impacts', (
   assert.match(phase5Sql, /Budget drivers require 12 monthly impact rows/);
   assert.match(phase5Sql, /baseline_line\.budget_baseline_id = target_set\.budget_baseline_id/);
   assert.match(phase5Sql, /Budget driver impact row does not match the locked baseline period/);
-  assert.match(repository, /\.rpc\('create_budget_driver'/);
-  assert.match(repository, /phaseDriverImpact/);
+  assert.match(mutationRepository, /\.rpc\('create_budget_driver'/);
+  assert.match(mutationRepository, /phaseDriverImpact/);
 });
 
 test('driver lifecycle governs proposed scenario-only and approved official impact', () => {
@@ -75,6 +78,22 @@ test('driver lifecycle governs proposed scenario-only and approved official impa
   assert.match(page, /Proposed drivers are scenario-only until approved/);
   assert.match(detailPage, /Proposed drivers are scenario-only and do not feed official impact/);
   assert.match(detailPage, /Approved drivers feed official driver impact/);
+});
+
+test('driver pages keep mutation RPC modules out of the static App Router import graph', () => {
+  assert.match(repository, /export \* from '\.\/budget-drivers-read'/);
+  assert.match(repository, /export \* from '\.\/budget-drivers-mutations'/);
+  assert.match(readRepository, /getBudgetDriverDashboard/);
+  assert.match(readRepository, /getBudgetDriverDetail/);
+  assert.doesNotMatch(readRepository, /createAdminClient|\.rpc\('/);
+  assert.match(mutationRepository, /createAdminClient/);
+  assert.match(mutationRepository, /transition_budget_driver_lifecycle/);
+  assert.match(page, /lib\/repositories\/budget-drivers-read/);
+  assert.match(detailPage, /lib\/repositories\/budget-drivers-read/);
+  assert.doesNotMatch(page, /lib\/repositories\/budget-drivers-mutations|lib\/repositories\/budget-drivers'/);
+  assert.doesNotMatch(detailPage, /lib\/repositories\/budget-drivers-mutations|lib\/repositories\/budget-drivers'/);
+  assert.match(actions, /await import\('\.\.\/\.\.\/lib\/repositories\/budget-drivers-mutations'\)/);
+  assert.doesNotMatch(actions, /^import .*budget-drivers/m);
 });
 
 test('driver layer keeps browser writes out of business tables', () => {

@@ -7,7 +7,8 @@ import type { RoleName } from '../types/roles';
 
 const layer1Repository = readFileSync(new URL('../lib/repositories/layer1.ts', import.meta.url), 'utf8');
 const baselineRepository = readFileSync(new URL('../lib/repositories/budget-baselines.ts', import.meta.url), 'utf8');
-const driverRepository = readFileSync(new URL('../lib/repositories/budget-drivers.ts', import.meta.url), 'utf8');
+const driverRepository = readFileSync(new URL('../lib/repositories/budget-drivers-read.ts', import.meta.url), 'utf8')
+  + readFileSync(new URL('../lib/repositories/budget-drivers-mutations.ts', import.meta.url), 'utf8');
 const migrations = readFileSync(new URL('../supabase/migrations/008_phase5_driver_layer.sql', import.meta.url), 'utf8')
   + readFileSync(new URL('../supabase/migrations/007_phase4_1_commercial_qa_hardening.sql', import.meta.url), 'utf8')
   + readFileSync(new URL('../supabase/migrations/006_phase4_budget_baseline_module.sql', import.meta.url), 'utf8')

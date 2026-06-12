@@ -4,7 +4,7 @@ import { AppShell } from '../../components/app-shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
 import { StatCard, StatusBadge, firstFiscalYearLabel, firstPlanName, money, num, text } from '../baseline/_components/baseline-shared';
 import { requireUserContext } from '../../lib/auth/session';
-import { canCreateDriverSet, canReviewDrivers, canWriteDrivers, getBudgetDriverDashboard } from '../../lib/repositories/budget-drivers';
+import { canCreateDriverSet, canReviewDrivers, canWriteDrivers, getBudgetDriverDashboard } from '../../lib/repositories/budget-drivers-read';
 
 export const dynamic = 'force-dynamic';
 
