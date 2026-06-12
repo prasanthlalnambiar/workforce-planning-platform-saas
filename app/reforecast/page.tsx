@@ -1,12 +1,8 @@
-import { AppShell } from '../../components/app-shell/app-shell';
-import { PlaceholderPage } from '../../components/ui/placeholder-page';
-import { requireUserContext } from '../../lib/auth/session';
+import { redirect } from 'next/navigation';
 
-export default async function Page() {
-  const context = await requireUserContext();
-  return (
-    <AppShell context={context}>
-      <PlaceholderPage eyebrow="Layer 2 placeholder" title="Monthly Reforecast" phase="Phase 6" body="Future working forecast, historical locks and latest valid forecast. Not built in Phase 1." />
-    </AppShell>
-  );
+export const dynamic = 'force-dynamic';
+export default function ReforecastRedirectPage() {
+  // The Phase 6 Reforecast Module lives at /reforecasts. This legacy placeholder
+  // route redirects so existing links keep working.
+  redirect('/reforecasts');
 }

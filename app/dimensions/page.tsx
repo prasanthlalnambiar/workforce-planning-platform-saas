@@ -5,6 +5,8 @@ import { requireUserContext } from '../../lib/auth/session';
 import { listDimension, type DimensionTable } from '../../lib/repositories/dimensions';
 import { hasPermission } from '../../lib/permissions/permissions';
 
+
+export const dynamic = 'force-dynamic';
 const dimensionTables: { table: DimensionTable; label: string }[] = [
   { table: 'regions', label: 'Regions' },
   { table: 'locations', label: 'Locations' },
