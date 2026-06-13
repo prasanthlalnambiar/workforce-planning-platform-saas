@@ -31,7 +31,7 @@ export default async function ReforecastsPage() {
         <PageHeader eyebrow="Phase 6 forecast governance" title="Monthly Reforecast" badge="Phase 6">
           The working forecast is calculated deterministically as the locked budget baseline plus approved drivers,
           then reviewed and locked. The latest locked forecast is the single current valid forecast.
-          Actuals ingestion, variance analysis and waterfall reporting are future phases.
+          Phase 7 actuals and variance consume locked forecast versions; waterfall reporting remains a future phase.
         </PageHeader>
 
         <section className="grid-4">

@@ -16,10 +16,17 @@ import type { Json } from '../../types/database';
 import type { UserContext } from '../../types/models';
 
 type JsonRecord = Record<string, unknown>;
+type QueryResult = { error: { message?: string } | null };
 
 function numberFrom(value: unknown, fallback = 0): number {
   const parsed = Number(value ?? fallback);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function assertQuerySucceeded(result: QueryResult, label: string): void {
+  if (result.error) {
+    throw new Error(`${label} query failed: ${result.error.message ?? 'Unknown Supabase error'}`);
+  }
 }
 
 export function canReadVariance(context: UserContext): boolean {
@@ -51,14 +58,18 @@ async function loadVarianceInputs(context: UserContext, actualsBatchId: string, 
   const supabase = await createClient();
   const orgId = context.organisationId;
 
-  const { data: batch } = await supabase
+  const batchRes = await supabase
     .from('actuals_batches').select('*').eq('organisation_id', orgId).eq('id', actualsBatchId).maybeSingle();
+  assertQuerySucceeded(batchRes, 'Actuals batch');
+  const batch = batchRes.data;
   if (!batch) throw new Error('Actuals batch not found');
   const batchRecord = batch as JsonRecord;
   if (String(batchRecord.status) !== 'posted') throw new Error('Variance can only be calculated from posted actuals');
 
-  const { data: reforecast } = await supabase
+  const reforecastRes = await supabase
     .from('reforecasts').select('*').eq('organisation_id', orgId).eq('id', reforecastId).maybeSingle();
+  assertQuerySucceeded(reforecastRes, 'Reforecast comparator');
+  const reforecast = reforecastRes.data;
   if (!reforecast) throw new Error('Reforecast not found');
   const reforecastRecord = reforecast as JsonRecord;
   if (!['locked', 'superseded'].includes(String(reforecastRecord.status))) {
@@ -71,8 +82,10 @@ async function loadVarianceInputs(context: UserContext, actualsBatchId: string, 
     throw new Error('Actuals batch and forecast must belong to the same baseline context');
   }
 
-  const { data: baseline } = await supabase
+  const baselineRes = await supabase
     .from('budget_baselines').select('*').eq('organisation_id', orgId).eq('id', String(batchRecord.baseline_id)).maybeSingle();
+  assertQuerySucceeded(baselineRes, 'Budget baseline');
+  const baseline = baselineRes.data;
   if (!baseline) throw new Error('Budget baseline not found');
 
   const [actualLinesRes, forecastLinesRes, baselineLinesRes] = await Promise.all([
@@ -80,6 +93,9 @@ async function loadVarianceInputs(context: UserContext, actualsBatchId: string, 
     supabase.from('reforecast_lines').select('*').eq('organisation_id', orgId).eq('reforecast_id', reforecastId).order('period_number', { ascending: true }),
     supabase.from('budget_baseline_lines').select('*').eq('organisation_id', orgId).eq('budget_baseline_id', String(batchRecord.baseline_id)).order('period_start', { ascending: true })
   ]);
+  assertQuerySucceeded(actualLinesRes, 'Actuals lines');
+  assertQuerySucceeded(forecastLinesRes, 'Reforecast lines');
+  assertQuerySucceeded(baselineLinesRes, 'Baseline lines');
 
   const actualLines: ActualsLineDraft[] = ((actualLinesRes.data ?? []) as JsonRecord[]).map((line) => ({
     planningPeriodId: String(line.planning_period_id),
@@ -172,8 +188,10 @@ export async function createVarianceReport(
 export async function recalculateVarianceReport(context: UserContext, reportId: string, reason: string): Promise<void> {
   requirePermission(context.roles, 'variance:write');
   const supabase = await createClient();
-  const { data: report } = await supabase
+  const reportRes = await supabase
     .from('variance_reports').select('*').eq('organisation_id', context.organisationId).eq('id', reportId).maybeSingle();
+  assertQuerySucceeded(reportRes, 'Variance report');
+  const report = reportRes.data;
   if (!report) throw new Error('Variance report not found');
   const record = report as JsonRecord;
   if (String(record.status) !== 'draft') throw new Error('Only draft variance reports can be recalculated');
@@ -202,14 +220,18 @@ export async function lockVarianceReport(context: UserContext, reportId: string,
   requirePermission(context.roles, 'variance:lock');
   const supabase = await createClient();
   const orgId = context.organisationId;
-  const { data: report } = await supabase
+  const reportRes = await supabase
     .from('variance_reports').select('*').eq('organisation_id', orgId).eq('id', reportId).maybeSingle();
+  assertQuerySucceeded(reportRes, 'Variance report');
+  const report = reportRes.data;
   if (!report) throw new Error('Variance report not found');
   const record = report as JsonRecord;
   if (String(record.status) !== 'draft') throw new Error('Only draft variance reports can be locked');
 
-  const { data: storedLines } = await supabase
+  const storedLinesRes = await supabase
     .from('variance_lines').select('*').eq('organisation_id', orgId).eq('variance_report_id', reportId).order('period_number', { ascending: true });
+  assertQuerySucceeded(storedLinesRes, 'Variance lines');
+  const storedLines = storedLinesRes.data;
 
   const lines: VarianceLineDraft[] = ((storedLines ?? []) as JsonRecord[]).map((line) => ({
     planningPeriodId: String(line.planning_period_id),
@@ -286,6 +308,12 @@ export async function getVarianceDashboard(context: UserContext): Promise<Varian
     supabase.from('variance_reports').select('*').eq('organisation_id', orgId).order('created_at', { ascending: false }),
     supabase.from('variance_lines').select('*').eq('organisation_id', orgId)
   ]);
+  assertQuerySucceeded(plansRes, 'Plans');
+  assertQuerySucceeded(fiscalYearsRes, 'Fiscal years');
+  assertQuerySucceeded(batchesRes, 'Posted actuals batches');
+  assertQuerySucceeded(reforecastsRes, 'Locked reforecasts');
+  assertQuerySucceeded(reportsRes, 'Variance reports');
+  assertQuerySucceeded(linesRes, 'Variance lines');
 
   const allLines = (linesRes.data ?? []) as JsonRecord[];
   const totalsByReport = new Map<string, VarianceTotals>();
@@ -344,8 +372,10 @@ export async function getVarianceDetail(context: UserContext, reportId: string):
   const supabase = await createClient();
   const orgId = context.organisationId;
 
-  const { data: report } = await supabase
+  const reportRes = await supabase
     .from('variance_reports').select('*').eq('organisation_id', orgId).eq('id', reportId).maybeSingle();
+  assertQuerySucceeded(reportRes, 'Variance report');
+  const report = reportRes.data;
   if (!report) {
     return { report: null, lines: [], totals: null, batch: null, reforecast: null, baseline: null, auditEvents: [], supersededBy: null };
   }
@@ -358,6 +388,11 @@ export async function getVarianceDetail(context: UserContext, reportId: string):
     supabase.from('budget_baselines').select('*').eq('organisation_id', orgId).eq('id', String(record.baseline_id)).maybeSingle(),
     supabase.from('audit_events').select('*').eq('organisation_id', orgId).eq('entity_type', 'variance_report').eq('entity_id', reportId).order('created_at', { ascending: false }).limit(50)
   ]);
+  assertQuerySucceeded(linesRes, 'Variance lines');
+  assertQuerySucceeded(batchRes, 'Variance actuals batch');
+  assertQuerySucceeded(reforecastRes, 'Variance reforecast');
+  assertQuerySucceeded(baselineRes, 'Variance baseline');
+  assertQuerySucceeded(auditRes, 'Variance audit events');
 
   const lines = (linesRes.data ?? []) as JsonRecord[];
   const totals = summariseVariance(lines.map((line) => ({
@@ -386,8 +421,9 @@ export async function getVarianceDetail(context: UserContext, reportId: string):
 
   async function relatedReport(id: unknown): Promise<JsonRecord | null> {
     if (!id) return null;
-    const { data } = await supabase.from('variance_reports').select('*').eq('organisation_id', orgId).eq('id', String(id)).maybeSingle();
-    return (data as JsonRecord) ?? null;
+    const relatedRes = await supabase.from('variance_reports').select('*').eq('organisation_id', orgId).eq('id', String(id)).maybeSingle();
+    assertQuerySucceeded(relatedRes, 'Related variance report');
+    return (relatedRes.data as JsonRecord) ?? null;
   }
 
   return {
