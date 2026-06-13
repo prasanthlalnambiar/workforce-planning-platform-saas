@@ -5,7 +5,8 @@ import { readFileSync } from 'node:fs';
 const guardedFiles = [
   'lib/supabase/admin.ts',
   'lib/audit/audit-service.ts',
-  'lib/repositories/onboarding.ts'
+  'lib/repositories/onboarding.ts',
+  'lib/repositories/budget-baselines.ts'
 ];
 
 test('sensitive server-only modules are guarded', () => {

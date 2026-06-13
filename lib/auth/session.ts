@@ -42,27 +42,48 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) return null;
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('id,email,full_name,default_organisation_id')
     .eq('id', userData.user.id)
     .single();
 
-  const { data: memberships } = await supabase
+  if (profileError) {
+    // UAT hardening: never silently degrade a failed auth-context query.
+    console.error('Auth context error: profile query failed', profileError.message);
+    throw new Error(`Auth context error: failed to load profile (${profileError.message})`);
+  }
+
+  const { data: memberships, error: membershipError } = await supabase
     .from('organisation_memberships')
     .select('organisation_id, organisations(name)')
     .eq('user_id', userData.user.id)
     .eq('status', 'active')
-    .limit(1) as { data: MembershipRow[] | null };
+    .limit(1) as { data: MembershipRow[] | null; error: { message: string } | null };
+
+  if (membershipError) {
+    console.error('Auth context error: membership query failed', membershipError.message);
+    throw new Error(`Auth context error: failed to load organisation membership (${membershipError.message})`);
+  }
 
   const organisationId = (profile?.default_organisation_id as string | undefined) || memberships?.[0]?.organisation_id;
   if (!organisationId) return null;
 
-  const { data: userRoles } = await supabase
+  // The roles embed names the FK constraint explicitly: user_roles has more
+  // than one relationship path to roles, and the bare roles(role_name) embed
+  // is ambiguous.
+  const { data: userRoles, error: roleError } = await supabase
     .from('user_roles')
-    .select('roles(role_name)')
+    .select('roles!user_roles_role_same_org_fk(role_name)')
     .eq('user_id', userData.user.id)
-    .eq('organisation_id', organisationId) as { data: RoleRow[] | null };
+    .eq('organisation_id', organisationId) as { data: RoleRow[] | null; error: { message: string } | null };
+
+  if (roleError) {
+    // A failed role query must never be converted into an empty role list:
+    // that would silently strip the user's permissions.
+    console.error('Auth context error: role query failed', roleError.message);
+    throw new Error(`Auth context error: failed to load roles (${roleError.message})`);
+  }
 
   const roles = (userRoles ?? [])
     .map((row) => row.roles?.role_name)

@@ -31,6 +31,9 @@ const businessTables = [
   'calculation_runs',
   'layer1_version_locks',
   'layer1_handoff_objects',
+  'budget_baselines',
+  'budget_baseline_lines',
+  'budget_baseline_snapshots',
   'audit_events'
 ];
 
@@ -72,4 +75,49 @@ test('Layer 1 immutable payload guards allow only controlled status movement', (
   assert.match(sql, /protect_layer1_version_lock_update/);
   assert.match(sql, /protect_layer1_handoff_update/);
   assert.match(sql, /locked calculation references cannot be changed/i);
+});
+
+test('Phase 3 Layer 1 approval, lock and handoff schema is present', () => {
+  assert.match(sql, /submitted_for_review/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS submitted_by uuid REFERENCES public\.profiles\(id\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS approved_by uuid REFERENCES public\.profiles\(id\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS approved_snapshot_json jsonb NOT NULL DEFAULT '\{\}'::jsonb/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS approved_calculation_run_id uuid/);
+  assert.match(sql, /ready_for_layer2/);
+});
+
+test('Phase 3 protects governed Layer 1 calculation and handoff payloads', () => {
+  assert.match(sql, /protect_calculation_run_governance_update/);
+  assert.match(sql, /Governed Layer 1 calculation payload cannot be changed/);
+  assert.match(sql, /Governed Layer 1 calculation runs cannot be deleted/);
+  assert.match(sql, /Approved handoff snapshot JSON cannot be changed/);
+  assert.match(sql, /Layer 1 handoff status transition is not allowed/);
+});
+
+test('Phase 3 lock and handoff tables enforce tenant-consistent references', () => {
+  assert.match(sql, /FOREIGN KEY \(organisation_id, fiscal_year_id\) REFERENCES public\.fiscal_years\(organisation_id, id\)/);
+  assert.match(sql, /FOREIGN KEY \(organisation_id, approved_calculation_run_id\) REFERENCES public\.calculation_runs\(organisation_id, id\)/);
+});
+
+
+test('Phase 2 Layer 1 engine fields are added to scaffolding tables', () => {
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS demand_category text NOT NULL DEFAULT 'measured_contact'/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS work_type_label text/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS weeks_per_month numeric\(8,2\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS current_supply_fte numeric\(12,2\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS annual_budget_target numeric\(18,2\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS risk_flags_json jsonb/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS scenario_summary_json jsonb/);
+});
+
+
+test('Phase 4 Budget Baseline schema is present and tenant-scoped', () => {
+  for (const table of ['budget_baselines', 'budget_baseline_lines', 'budget_baseline_snapshots']) {
+    assert.match(sql, new RegExp(`CREATE TABLE public\\.${table}`));
+    assert.match(sql, new RegExp(`CREATE TABLE public\\.${table} \\([\\s\\S]*?organisation_id uuid NOT NULL`));
+    assert.match(sql, new RegExp(`ALTER TABLE public\\.${table} ENABLE ROW LEVEL SECURITY;`));
+  }
+  assert.match(sql, /CONSTRAINT budget_baselines_handoff_same_org_fk FOREIGN KEY \(organisation_id, source_layer1_handoff_id\)/);
+  assert.match(sql, /CONSTRAINT budget_baseline_lines_period_same_org_fk FOREIGN KEY \(organisation_id, period_id\)/);
+  assert.match(sql, /CONSTRAINT budget_baseline_snapshots_baseline_same_org_fk FOREIGN KEY \(organisation_id, budget_baseline_id\)/);
 });

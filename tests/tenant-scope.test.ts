@@ -13,3 +13,12 @@ test('filters records by organisation id', () => {
 test('throws when record belongs to another tenant', () => {
   assert.throws(() => assertTenantMatch({ organisation_id: 'org-2' }, 'org-1'), /Tenant access denied/);
 });
+
+
+test('filters Layer 1 records by organisation id before calculation use', () => {
+  const demandInputs = [
+    { id: 'demand-1', organisation_id: 'org-1', plan_id: 'plan-1', demand_volume: 100 },
+    { id: 'demand-2', organisation_id: 'org-2', plan_id: 'plan-2', demand_volume: 999 }
+  ];
+  assert.deepEqual(filterTenantRows(demandInputs, 'org-1'), [{ id: 'demand-1', organisation_id: 'org-1', plan_id: 'plan-1', demand_volume: 100 }]);
+});

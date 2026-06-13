@@ -1,0 +1,52 @@
+name: Quality Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - phase*
+
+jobs:
+  quality-gate:
+    name: Phase quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Unit and contract tests
+        run: npm test
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Route diagnostics before build
+        run: npm run inspect:routes
+
+      - name: Production build
+        timeout-minutes: 8
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build-output.log
+
+      - name: Static route output guard
+        run: npm run inspect:routes -- --build-output build-output.log
+
+      - name: Dependency audit
+        run: npm audit --audit-level=low

@@ -7,6 +7,8 @@ import { listPlans } from '../../lib/repositories/plans';
 import { listFiscalYears, listPlanningPeriods } from '../../lib/repositories/fiscal-years';
 import { hasPermission } from '../../lib/permissions/permissions';
 
+
+export const dynamic = 'force-dynamic';
 export default async function FiscalYearsPage() {
   const context = await requireUserContext();
   const [plans, fiscalYears, periods] = await Promise.all([
