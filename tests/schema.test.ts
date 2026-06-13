@@ -34,9 +34,6 @@ const businessTables = [
   'budget_baselines',
   'budget_baseline_lines',
   'budget_baseline_snapshots',
-  'budget_driver_sets',
-  'budget_drivers',
-  'budget_driver_monthly_impacts',
   'audit_events'
 ];
 
@@ -123,15 +120,4 @@ test('Phase 4 Budget Baseline schema is present and tenant-scoped', () => {
   assert.match(sql, /CONSTRAINT budget_baselines_handoff_same_org_fk FOREIGN KEY \(organisation_id, source_layer1_handoff_id\)/);
   assert.match(sql, /CONSTRAINT budget_baseline_lines_period_same_org_fk FOREIGN KEY \(organisation_id, period_id\)/);
   assert.match(sql, /CONSTRAINT budget_baseline_snapshots_baseline_same_org_fk FOREIGN KEY \(organisation_id, budget_baseline_id\)/);
-});
-
-test('Phase 5 Driver Layer schema is present and tenant-scoped', () => {
-  for (const table of ['budget_driver_sets', 'budget_drivers', 'budget_driver_monthly_impacts']) {
-    assert.match(sql, new RegExp(`CREATE TABLE public\\.${table}`));
-    assert.match(sql, new RegExp(`CREATE TABLE public\\.${table} \\([\\s\\S]*?organisation_id uuid NOT NULL`));
-    assert.match(sql, new RegExp(`ALTER TABLE public\\.${table} ENABLE ROW LEVEL SECURITY;`));
-  }
-  assert.match(sql, /CONSTRAINT budget_driver_sets_baseline_same_org_fk FOREIGN KEY \(organisation_id, budget_baseline_id\)/);
-  assert.match(sql, /CONSTRAINT budget_drivers_set_same_org_fk FOREIGN KEY \(organisation_id, driver_set_id\)/);
-  assert.match(sql, /CONSTRAINT budget_driver_impacts_period_same_org_fk FOREIGN KEY \(organisation_id, period_id\)/);
 });

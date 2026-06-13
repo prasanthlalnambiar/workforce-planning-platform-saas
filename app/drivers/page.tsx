@@ -1,255 +1,206 @@
 import Link from 'next/link';
-import { createDriverAction, createDriverSetAction, transitionDriverLifecycleAction } from './actions';
+import { createDriverAction } from './actions';
 import { AppShell } from '../../components/app-shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
-import { StatCard, StatusBadge, firstFiscalYearLabel, firstPlanName, money, num, text } from '../baseline/_components/baseline-shared';
 import { requireUserContext } from '../../lib/auth/session';
-import { canCreateDriverSet, canReviewDrivers, canWriteDrivers, getBudgetDriverDashboard } from '../../lib/repositories/budget-drivers-read';
+import { canWriteDrivers, getDriverDashboard } from '../../lib/repositories/forecast-drivers';
+import {
+  CategoryBadge,
+  DriverStatusBadge,
+  StatCard,
+  displayDate,
+  firstFiscalYearLabel,
+  firstPlanName,
+  impactDisplay,
+  impactTypeLabel,
+  money,
+  periodLabel,
+  phasingLabel,
+  signedNum,
+  text
+} from './_components/driver-shared';
+
 
 export const dynamic = 'force-dynamic';
-
-const driverStatuses = ['draft', 'proposed', 'approved', 'superseded', 'voided'] as const;
-
-function baselineName(baselines: Record<string, unknown>[], baselineId: unknown): string {
-  return text(baselines.find((baseline) => String(baseline.id) === String(baselineId))?.baseline_name, 'Baseline not found');
-}
-
-function driverSetName(driverSets: Record<string, unknown>[], driverSetId: unknown): string {
-  return text(driverSets.find((set) => String(set.id) === String(driverSetId))?.driver_set_name, 'Driver set not found');
-}
-
-function countByStatus(drivers: Record<string, unknown>[], status: string): number {
-  return drivers.filter((driver) => String(driver.status) === status).length;
-}
-
-function DriverSubnav() {
-  return (
-    <nav className="subnav" aria-label="Driver layer navigation">
-      <a href="#create">Create drivers</a>
-      <a href="#drivers">Driver register</a>
-      <a href="#sets">Driver packs</a>
-      <a href="#impact">Impact split</a>
-    </nav>
-  );
-}
-
-function LifecycleActions({ driver, userCanWrite, userCanReview }: { driver: Record<string, unknown>; userCanWrite: boolean; userCanReview: boolean }) {
-  const status = String(driver.status ?? 'draft');
-  const driverId = String(driver.id);
-  const action = (nextStatus: string, label: string, disabled: boolean) => (
-    <form action={transitionDriverLifecycleAction}>
-      <input type="hidden" name="driver_id" value={driverId} />
-      <input type="hidden" name="next_status" value={nextStatus} />
-      <input type="hidden" name="transition_reason" value={`Driver moved to ${nextStatus}`} />
-      <button className="button button-secondary" disabled={disabled} type="submit">{label}</button>
-    </form>
-  );
-
-  if (status === 'draft') {
-    return (
-      <div className="inline-actions">
-        {action('proposed', 'Propose', !userCanWrite)}
-        {action('voided', 'Void', !userCanWrite)}
-      </div>
-    );
-  }
-  if (status === 'proposed') {
-    return (
-      <div className="inline-actions">
-        {action('approved', 'Approve', !userCanReview)}
-        {action('voided', 'Void', !userCanReview)}
-      </div>
-    );
-  }
-  if (status === 'approved') {
-    return <div className="inline-actions">{action('superseded', 'Supersede', !userCanReview)}</div>;
-  }
-  return <span className="small-note">No lifecycle action</span>;
-}
-
-export default async function DriverLayerPage() {
+export default async function DriversPage() {
   const context = await requireUserContext();
-  const data = await getBudgetDriverDashboard(context);
-  const userCanCreateSet = canCreateDriverSet(context);
+  const data = await getDriverDashboard(context);
   const userCanWrite = canWriteDrivers(context);
-  const userCanReview = canReviewDrivers(context);
-  const openDriverSets = data.driverSets.filter((set) => ['draft', 'proposed'].includes(String(set.status)));
+
+  const activeDrivers = data.drivers.filter((driver) => !['superseded', 'voided'].includes(String(driver.status)));
+  const approvedDrivers = activeDrivers.filter((driver) => String(driver.status) === 'approved');
+  const proposedDrivers = activeDrivers.filter((driver) => String(driver.status) === 'proposed');
+  const draftDrivers = activeDrivers.filter((driver) => String(driver.status) === 'draft');
+  const previewBaseline = data.previewBaseline;
+  const previewPeriods = previewBaseline
+    ? data.periods.filter((period) => String(period.fiscal_year_id) === String(previewBaseline.fiscal_year_id))
+    : [];
+  const lastPreviewPeriodId = previewPeriods.length > 0 ? String(previewPeriods[previewPeriods.length - 1].id) : undefined;
 
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Phase 5 driver layer" title="Drivers" badge="Phase 5">
-          Convert locked budget baselines into governed driver assumptions with scenario-only proposals and approved official driver impact. This page does not create reforecast locks, actuals, variance, waterfall or AI outputs.
+        <PageHeader eyebrow="Phase 5 driver governance" title="Driver Layer" badge="Phase 5">
+          Register, phase and govern the named drivers that explain movement away from the locked budget baseline.
+          Only approved drivers feed the official forecast position. Proposed drivers feed scenarios only.
+          This module stops at the governed driver register: reforecast locks, actuals, variance and waterfall come in later phases.
         </PageHeader>
-        <DriverSubnav />
 
         <section className="grid-4">
-          <StatCard label="Draft" value={countByStatus(data.drivers, 'draft')} note="Editable drivers" />
-          <StatCard label="Proposed" value={countByStatus(data.drivers, 'proposed')} note="Scenario-only preview" tone="warm" />
-          <StatCard label="Approved" value={countByStatus(data.drivers, 'approved')} note="Official driver impact" tone="green" />
-          <StatCard label="Superseded / voided" value={countByStatus(data.drivers, 'superseded') + countByStatus(data.drivers, 'voided')} note="Excluded from official impact" />
+          <StatCard label="Approved drivers" value={approvedDrivers.length} note="Feed the official forecast position" tone={approvedDrivers.length > 0 ? 'green' : undefined} />
+          <StatCard label="Proposed drivers" value={proposedDrivers.length} note="Scenario impact only until approved" tone={proposedDrivers.length > 0 ? 'warm' : undefined} />
+          <StatCard label="Draft drivers" value={draftDrivers.length} note="Editable working entries" />
+          <StatCard label="Locked baselines" value={data.lockedBaselines.length} note="Drivers attach to a locked baseline" />
         </section>
 
-        <section id="impact" className="grid-2">
-          <article className="card">
-            <p className="eyebrow">Approved official impact</p>
-            <h2>{money(data.officialSummary.budgetDelta)}</h2>
-            <div className="grid-3">
-              <StatCard label="Labour cost" value={money(data.officialSummary.labourCostDelta)} />
-              <StatCard label="Required FTE" value={num(data.officialSummary.requiredFteDelta)} />
-              <StatCard label="Workload hours" value={num(data.officialSummary.workloadHoursDelta)} />
+        {previewBaseline && data.preview ? (
+          <section id="impact" className="card cockpit-card">
+            <div className="split-row">
+              <div>
+                <p className="eyebrow">Indicative impact — not a locked forecast</p>
+                <h2>{text(previewBaseline.baseline_name)}</h2>
+                <p>
+                  Deterministic view of the locked baseline plus approved drivers (official position) and plus proposed drivers (scenario).
+                  The governed reforecast and forecast locks are built in Phase 6.
+                </p>
+              </div>
             </div>
-          </article>
-          <article className="card">
-            <p className="eyebrow">Proposed scenario preview</p>
-            <h2>{money(data.proposedSummary.budgetDelta)}</h2>
-            <div className="grid-3">
-              <StatCard label="Labour cost" value={money(data.proposedSummary.labourCostDelta)} />
-              <StatCard label="Required FTE" value={num(data.proposedSummary.requiredFteDelta)} />
-              <StatCard label="Workload hours" value={num(data.proposedSummary.workloadHoursDelta)} />
+            <div className="grid-4">
+              <StatCard label="Baseline annual budget" value={money(data.preview.totals.baselineBudget)} />
+              <StatCard label="With approved drivers" value={money(data.preview.totals.approvedBudget)} note={`Movement ${signedNum(data.preview.totals.approvedBudgetDelta, 0)}`} tone="green" />
+              <StatCard label="Scenario with proposed" value={money(data.preview.totals.scenarioBudget)} note={`Movement ${signedNum(data.preview.totals.scenarioBudgetDelta, 0)}`} tone="warm" />
+              <StatCard label="FTE movement" value={signedNum(data.preview.totals.approvedFteDelta)} note={`Scenario ${signedNum(data.preview.totals.scenarioFteDelta)}`} />
             </div>
-          </article>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Period</th><th>Baseline budget</th><th>Official (approved)</th><th>Scenario (incl. proposed)</th><th>Baseline FTE</th><th>Official FTE</th><th>Scenario FTE</th></tr>
+                </thead>
+                <tbody>
+                  {data.preview.rows.map((row) => (
+                    <tr key={row.periodId}>
+                      <td>{periodLabel(row.periodStart)}</td>
+                      <td>{money(row.baselineBudget)}</td>
+                      <td>{money(row.approvedBudget)}</td>
+                      <td>{money(row.scenarioBudget)}</td>
+                      <td>{row.baselineRequiredFte.toFixed(2)}</td>
+                      <td>{row.approvedRequiredFte.toFixed(2)}</td>
+                      <td>{row.scenarioRequiredFte.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : (
+          <section className="card">
+            <p className="eyebrow">No locked baseline yet</p>
+            <h2>Lock a budget baseline first</h2>
+            <p>Drivers explain movement away from a locked baseline, so the driver register opens once a baseline is locked in the <Link href="/baseline">Budget Baseline</Link> module.</p>
+          </section>
+        )}
+
+        <section id="create" className="card governance-action">
+          <p className="eyebrow">Register a driver</p>
+          <h2>New forecast driver</h2>
+          <p>Drivers are created as drafts, phased deterministically server-side, then proposed and approved through governed transitions. Every step writes an audit event.</p>
+          <form className="form-grid" action={createDriverAction}>
+            <label className="field wide">
+              <span>Locked baseline</span>
+              <select name="budget_baseline_id" required disabled={!userCanWrite || data.lockedBaselines.length === 0}>
+                <option value="">Select the locked baseline this driver moves</option>
+                {data.lockedBaselines.map((baseline) => (
+                  <option key={String(baseline.id)} value={String(baseline.id)}>
+                    {text(baseline.baseline_name)} · {firstPlanName(data.plans, baseline.plan_id)} · {firstFiscalYearLabel(data.fiscalYears, baseline.fiscal_year_id)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field wide"><span>Driver name</span><input name="driver_name" required placeholder="AI deflection program — Tier 1 chat" disabled={!userCanWrite} /></label>
+            <label className="field">
+              <span>Category</span>
+              <select name="category" required disabled={!userCanWrite}>
+                <option value="growth">Growth</option>
+                <option value="efficiency">Efficiency</option>
+                <option value="cost_change">Cost change</option>
+                <option value="supply_change">Supply change</option>
+                <option value="management_adjustment">Management adjustment</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Impact type</span>
+              <select name="impact_type" required disabled={!userCanWrite}>
+                <option value="cost_delta">Cost impact (currency)</option>
+                <option value="fte_delta">FTE impact</option>
+                <option value="workload_hours_delta">Workload hours impact</option>
+              </select>
+            </label>
+            <label className="field"><span>Annual impact (signed)</span><input name="annual_impact_amount" required type="number" step="0.01" placeholder="-250000 for a reduction" disabled={!userCanWrite} /></label>
+            <label className="field">
+              <span>Phasing model</span>
+              <select name="phasing_model" required disabled={!userCanWrite}>
+                <option value="straight_line">Straight line</option>
+                <option value="ramp_up">Ramp up</option>
+                <option value="ramp_down">Ramp down</option>
+                <option value="one_off">One-off</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Start period</span>
+              <select name="start_period_id" required disabled={!userCanWrite}>
+                {previewPeriods.map((period) => <option key={String(period.id)} value={String(period.id)}>{periodLabel(period.period_start)}</option>)}
+              </select>
+            </label>
+            <label className="field">
+              <span>End period</span>
+              <select name="end_period_id" required disabled={!userCanWrite} defaultValue={lastPreviewPeriodId}>
+                {previewPeriods.map((period) => <option key={String(period.id)} value={String(period.id)}>{periodLabel(period.period_start)}</option>)}
+              </select>
+            </label>
+            <label className="field">
+              <span>One-off period (one-off only)</span>
+              <select name="one_off_period_id" disabled={!userCanWrite}>
+                <option value="">Not a one-off driver</option>
+                {previewPeriods.map((period) => <option key={String(period.id)} value={String(period.id)}>{periodLabel(period.period_start)}</option>)}
+              </select>
+            </label>
+            <label className="field">
+              <span>Confidence</span>
+              <select name="confidence_rating" defaultValue="medium" disabled={!userCanWrite}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <label className="field wide"><span>Commentary</span><textarea name="commentary" placeholder="What is driving this movement, what evidence supports it, and who owns delivery?" disabled={!userCanWrite} /></label>
+            <label className="field wide"><span>Reason (audit trail)</span><input name="reason" placeholder="Why is this driver being registered?" disabled={!userCanWrite} /></label>
+            <button className="button" disabled={!userCanWrite || data.lockedBaselines.length === 0} type="submit">Register draft driver</button>
+          </form>
         </section>
 
-        <section id="create" className="grid-2">
-          <article className="card governance-action">
-            <p className="eyebrow">Driver pack</p>
-            <h2>Start from locked baseline</h2>
-            <p>Driver packs group evidence only. Individual driver lifecycle controls official impact.</p>
-            <form className="form-grid single" action={createDriverSetAction}>
-              <label className="field">
-                <span>Locked baseline</span>
-                <select name="budget_baseline_id" required disabled={!userCanCreateSet || data.lockedBaselines.length === 0}>
-                  <option value="">Select locked baseline</option>
-                  {data.lockedBaselines.map((baseline) => (
-                    <option key={String(baseline.id)} value={String(baseline.id)}>
-                      {text(baseline.baseline_name)} · {firstFiscalYearLabel(data.fiscalYears, baseline.fiscal_year_id)} · {money(baseline.annual_budget_amount)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field"><span>Driver pack name</span><input name="driver_set_name" required placeholder="FY2027 growth and efficiency drivers" /></label>
-              <label className="field"><span>Notes</span><textarea name="notes" placeholder="Scope, decision forum, source packs or planning cycle." /></label>
-              <button className="button" disabled={!userCanCreateSet || data.lockedBaselines.length === 0} type="submit">Create pack</button>
-            </form>
-          </article>
-
-          <article className="card governance-action">
-            <p className="eyebrow">Draft driver</p>
-            <h2>Monthly phased impact</h2>
-            <p>Drafts are editable. Proposed drivers are scenario-only until approved.</p>
-            <form className="form-grid" action={createDriverAction}>
-              <label className="field wide">
-                <span>Driver pack</span>
-                <select name="driver_set_id" required disabled={!userCanWrite || openDriverSets.length === 0}>
-                  <option value="">Select driver pack</option>
-                  {openDriverSets.map((set) => (
-                    <option key={String(set.id)} value={String(set.id)}>
-                      {text(set.driver_set_name)} · {baselineName(data.lockedBaselines, set.budget_baseline_id)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field wide"><span>Driver name</span><input name="driver_name" required placeholder="Digital containment uplift" /></label>
-              <label className="field">
-                <span>Category</span>
-                <select name="driver_category" required disabled={!userCanWrite}>
-                  <option value="growth">Growth</option>
-                  <option value="efficiency">Efficiency</option>
-                  <option value="cost_change">Cost change</option>
-                  <option value="supply_change">Supply change</option>
-                  <option value="management_adjustment">Management adjustment</option>
-                </select>
-              </label>
-              <label className="field">
-                <span>Direction</span>
-                <select name="driver_direction" required disabled={!userCanWrite}>
-                  <option value="increase">Increase</option>
-                  <option value="decrease">Decrease</option>
-                </select>
-              </label>
-              <label className="field">
-                <span>Phasing</span>
-                <select name="phasing_method" required disabled={!userCanWrite}>
-                  <option value="straight_line">Straight line</option>
-                  <option value="ramp_up">Ramp up</option>
-                  <option value="ramp_down">Ramp down</option>
-                  <option value="one_off">One off</option>
-                </select>
-              </label>
-              <label className="field"><span>One-off period</span><input name="one_off_period_number" type="number" min="1" max="12" step="1" placeholder="1-12" /></label>
-              <label className="field">
-                <span>Impact basis</span>
-                <select name="impact_basis" required disabled={!userCanWrite}>
-                  <option value="multi_metric">Multi metric</option>
-                  <option value="budget_amount">Budget amount</option>
-                  <option value="labour_cost">Labour cost</option>
-                  <option value="required_fte">Required FTE</option>
-                  <option value="workload_hours">Workload hours</option>
-                </select>
-              </label>
-              <label className="field">
-                <span>Risk</span>
-                <select name="risk_rating" required disabled={!userCanWrite}>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                  <option value="high">High</option>
-                </select>
-              </label>
-              <label className="field"><span>Annual budget impact</span><input name="annual_budget_delta" type="number" min="0" step="1000" /></label>
-              <label className="field"><span>Annual labour cost impact</span><input name="annual_labour_cost_delta" type="number" min="0" step="1000" /></label>
-              <label className="field"><span>Required FTE impact</span><input name="annual_required_fte_delta" type="number" min="0" step="0.01" /></label>
-              <label className="field"><span>Workload hour impact</span><input name="annual_workload_hours_delta" type="number" min="0" step="0.01" /></label>
-              <label className="field"><span>Confidence score</span><input name="confidence_score" type="number" min="0" max="100" step="1" defaultValue="70" /></label>
-              <label className="field"><span>Evidence quality score</span><input name="evidence_quality_score" type="number" min="0" max="100" step="1" defaultValue="70" /></label>
-              <label className="field wide"><span>Rationale</span><textarea name="rationale" placeholder="Evidence, dependency, owner and calculation basis." /></label>
-              <button className="button" disabled={!userCanWrite || openDriverSets.length === 0} type="submit">Create draft driver</button>
-            </form>
-          </article>
-        </section>
-
-        <section id="drivers" className="card">
-          <div className="split-row"><div><p className="eyebrow">Driver register</p><h2>Governed driver lifecycle</h2></div></div>
+        <section id="register" className="card">
+          <div className="split-row">
+            <div><p className="eyebrow">Driver register</p><h2>All drivers</h2></div>
+          </div>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Driver</th><th>Status</th><th>Pack</th><th>Category</th><th>Phasing</th><th>Budget</th><th>Official treatment</th><th>Lifecycle</th></tr></thead>
+              <thead>
+                <tr><th>Driver</th><th>Category</th><th>Status</th><th>Impact</th><th>Phasing</th><th>Plan/FY</th><th>Created</th><th></th></tr>
+              </thead>
               <tbody>
                 {data.drivers.map((driver) => (
                   <tr key={String(driver.id)}>
-                    <td><strong><Link href={`/drivers/${String(driver.id)}`}>{text(driver.driver_name)}</Link></strong><br /><span className="small-note">{text(driver.rationale, 'No rationale captured.')}</span></td>
-                    <td><StatusBadge status={driver.status} /></td>
-                    <td>{driverSetName(data.driverSets, driver.driver_set_id)}</td>
-                    <td>{text(driver.driver_category).replaceAll('_', ' ')}</td>
-                    <td>{text(driver.phasing_method).replaceAll('_', ' ')}</td>
-                    <td>{money(driver.annual_budget_delta)}</td>
-                    <td>{driverStatuses.includes(String(driver.status) as (typeof driverStatuses)[number]) && String(driver.status) === 'approved' ? 'official impact' : String(driver.status) === 'proposed' ? 'scenario only' : 'excluded until approved'}</td>
-                    <td><LifecycleActions driver={driver} userCanWrite={userCanWrite} userCanReview={userCanReview} /></td>
+                    <td><strong>{text(driver.driver_code)}</strong> · {text(driver.driver_name)}<br /><span className="small-note">{impactTypeLabel(driver.impact_type)} · confidence {text(driver.confidence_rating)}</span></td>
+                    <td><CategoryBadge category={driver.category} /></td>
+                    <td><DriverStatusBadge status={driver.status} /></td>
+                    <td>{impactDisplay(driver.impact_type, driver.annual_impact_amount)}</td>
+                    <td>{phasingLabel(driver.phasing_model)}</td>
+                    <td>{firstPlanName(data.plans, driver.plan_id)}<br /><span className="small-note">{firstFiscalYearLabel(data.fiscalYears, driver.fiscal_year_id)}</span></td>
+                    <td>{displayDate(driver.created_at)}</td>
+                    <td><Link className="button button-secondary button-link" href={`/drivers/${String(driver.id)}`}>Open</Link></td>
                   </tr>
                 ))}
-                {data.drivers.length === 0 ? <tr><td colSpan={8}>No drivers yet.</td></tr> : null}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="sets" className="card">
-          <div className="split-row"><div><p className="eyebrow">Driver packs</p><h2>Secondary grouping</h2></div></div>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Pack</th><th>Status</th><th>Plan/FY</th><th>Baseline</th><th>Official budget</th><th>Official FTE</th><th>Drivers</th></tr></thead>
-              <tbody>
-                {data.driverSets.map((set) => (
-                  <tr key={String(set.id)}>
-                    <td><strong>{text(set.driver_set_name)}</strong><br /><span className="small-note">{text(set.notes, 'No notes captured.')}</span></td>
-                    <td><StatusBadge status={set.status} /></td>
-                    <td>{firstPlanName(data.plans, set.plan_id)}<br /><span className="small-note">{firstFiscalYearLabel(data.fiscalYears, set.fiscal_year_id)}</span></td>
-                    <td>{baselineName(data.lockedBaselines, set.budget_baseline_id)}</td>
-                    <td>{money(set.total_budget_delta)}</td>
-                    <td>{num(set.total_required_fte_delta)}</td>
-                    <td>{data.drivers.filter((driver) => String(driver.driver_set_id) === String(set.id)).length}</td>
-                  </tr>
-                ))}
-                {data.driverSets.length === 0 ? <tr><td colSpan={7}>No driver packs yet.</td></tr> : null}
+                {data.drivers.length === 0 ? <tr><td colSpan={8}>No forecast drivers yet.</td></tr> : null}
               </tbody>
             </table>
           </div>

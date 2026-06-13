@@ -6,10 +6,7 @@ const guardedFiles = [
   'lib/supabase/admin.ts',
   'lib/audit/audit-service.ts',
   'lib/repositories/onboarding.ts',
-  'lib/repositories/budget-baselines.ts',
-  'lib/repositories/budget-drivers.ts',
-  'lib/repositories/budget-drivers-read.ts',
-  'lib/repositories/budget-drivers-mutations.ts'
+  'lib/repositories/budget-baselines.ts'
 ];
 
 test('sensitive server-only modules are guarded', () => {

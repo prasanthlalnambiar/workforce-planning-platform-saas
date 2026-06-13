@@ -4,7 +4,6 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const packageJson = readFileSync(new URL('../package.json', import.meta.url), 'utf8');
 const workflow = readFileSync(new URL('../.github/workflows/quality-gate.yml', import.meta.url), 'utf8');
-const verifyScript = readFileSync(new URL('../scripts/verify.mjs', import.meta.url), 'utf8');
 const buildScript = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const inspectRoutesScript = readFileSync(new URL('../scripts/inspect-routes.mjs', import.meta.url), 'utf8');
 const nextConfig = readFileSync(new URL('../next.config.mjs', import.meta.url), 'utf8');
@@ -36,26 +35,37 @@ test('CI captures build output and uses route diagnostics instead of a naive leg
   assert.doesNotMatch(workflow, /grep -q "○"/);
 });
 
-test('local verification also checks build output through route diagnostics', () => {
-  assert.match(verifyScript, /build-output\.log/);
-  assert.match(verifyScript, /scripts\/build\.mjs/);
-  assert.match(verifyScript, /scripts\/inspect-routes\.mjs/);
+test('verify is a flat shell chain of the standalone gate commands with no custom orchestrator', () => {
+  const packageData = JSON.parse(packageJson);
+  const verifyChain = packageData.scripts.verify;
+  // Each step is exactly the command that is verified standalone; && chaining
+  // gives deterministic exit handling: any failure halts the chain.
+  const expectedSteps = [
+    'npm test',
+    'npm run typecheck',
+    'npm run lint',
+    'npm run build',
+    'npm run inspect:routes -- --build-output build-output.log',
+    'npm audit --audit-level=low'
+  ];
+  assert.equal(verifyChain, expectedSteps.join(' && '));
+  // Build runs before route diagnostics, so verify never depends on a stale build.
+  assert.ok(verifyChain.indexOf('npm run build') < verifyChain.indexOf('--build-output'));
+  // No bespoke verify orchestrator process exists to diverge from the
+  // standalone build path.
+  assert.equal(existsSync(new URL('../scripts/verify.mjs', import.meta.url)), false);
 });
 
-test('local verification runs mandatory gates in order and exits cleanly after audit', () => {
-  const steps = ['Unit and contract tests', 'TypeScript typecheck', 'Lint', 'Production build', 'Route diagnostics', 'Dependency audit'];
-  for (const step of steps) assert.match(verifyScript, new RegExp(step));
-  assert.ok(verifyScript.indexOf('Unit and contract tests') < verifyScript.indexOf('TypeScript typecheck'));
-  assert.ok(verifyScript.indexOf('TypeScript typecheck') < verifyScript.indexOf('Lint'));
-  assert.ok(verifyScript.indexOf('Lint') < verifyScript.indexOf('Production build'));
-  assert.ok(verifyScript.indexOf('Production build') < verifyScript.indexOf('Route diagnostics'));
-  assert.ok(verifyScript.indexOf('Route diagnostics') < verifyScript.lastIndexOf('runNpmAudit()'));
-  assert.match(verifyScript, /runCaptured\('Dependency audit', npmCommand, \['audit', '--audit-level=low'\]\)/);
-  assert.match(verifyScript, /stdio:\s*\['ignore', 'pipe', 'pipe'\]/);
-  assert.match(verifyScript, /timeout:\s*120_000/);
-  assert.match(verifyScript, /npm_config_update_notifier:\s*'false'/);
-  assert.match(verifyScript, /process\.exit\(0\);/);
-  assert.doesNotMatch(verifyScript, /npm_execpath/);
+test('the production build wrapper owns build-output.log without captured pipes', () => {
+  // build.mjs writes Next's output via a file descriptor: no pipes are created
+  // and no parent reads a live child stream, so the build cannot block on
+  // captured output. Standalone build and verify share this single path.
+  assert.match(buildScript, /build-output\.log/);
+  assert.match(buildScript, /openSync\(logPath, 'w'\)/);
+  assert.match(buildScript, /stdio: \['inherit', logFd, logFd\]/);
+  assert.doesNotMatch(buildScript, /stdio:\s*'pipe'/);
+  assert.doesNotMatch(buildScript, /encoding:\s*'utf8'/);
+  assert.doesNotMatch(buildScript, /maxBuffer/);
 });
 
 
@@ -67,11 +77,12 @@ test('Next internal build validation is separated from mandatory standalone gate
   assert.match(workflow, /npm run build/);
   assert.ok(workflow.indexOf('npm run typecheck') < workflow.indexOf('npm run build'));
   assert.ok(workflow.indexOf('npm run lint') < workflow.indexOf('npm run build'));
-  assert.match(verifyScript, /TypeScript typecheck/);
-  assert.match(verifyScript, /Lint/);
-  assert.match(verifyScript, /Production build/);
-  assert.ok(verifyScript.indexOf('TypeScript typecheck') < verifyScript.indexOf('Production build'));
-  assert.ok(verifyScript.indexOf('Lint') < verifyScript.indexOf('Production build'));
+  const verifyChain = JSON.parse(packageJson).scripts.verify;
+  assert.ok(verifyChain.includes('npm run typecheck'));
+  assert.ok(verifyChain.includes('npm run lint'));
+  assert.ok(verifyChain.includes('npm run build'));
+  assert.ok(verifyChain.indexOf('npm run typecheck') < verifyChain.indexOf('npm run build'));
+  assert.ok(verifyChain.indexOf('npm run lint') < verifyChain.indexOf('npm run build'));
 });
 
 test('Next page-data collection uses deterministic single-lane workers', () => {

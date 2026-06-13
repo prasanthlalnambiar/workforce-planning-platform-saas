@@ -20,7 +20,7 @@ export default async function BudgetBaselinePage() {
     <AppShell context={context}>
       <div className="stack">
         <PageHeader eyebrow="Phase 4 budget governance" title="Budget Baseline" badge="Phase 4">
-          Convert a ready Layer 1 handoff into a fixed annual OPEX and labour budget reference. This module stops at the locked baseline. Phase 5 drivers use locked baselines as inputs; reforecasting, actuals and variance come later.
+          Convert a ready Layer 1 handoff into a fixed annual OPEX and labour budget reference. This module stops at the locked baseline. Drivers, reforecasting, actuals and variance come later.
         </PageHeader>
         <BaselineSubnav />
 

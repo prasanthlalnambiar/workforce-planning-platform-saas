@@ -69,9 +69,16 @@ export interface Database {
       budget_baselines: GenericTable;
       budget_baseline_lines: GenericTable;
       budget_baseline_snapshots: GenericTable;
-      budget_driver_sets: GenericTable;
-      budget_drivers: GenericTable;
-      budget_driver_monthly_impacts: GenericTable;
+      forecast_drivers: GenericTable;
+      reforecasts: GenericTable;
+      reforecast_lines: GenericTable;
+      reforecast_driver_impacts: GenericTable;
+      reforecast_snapshots: GenericTable;
+      actuals_batches: GenericTable;
+      actuals_lines: GenericTable;
+      variance_reports: GenericTable;
+      variance_lines: GenericTable;
+      forecast_driver_lines: GenericTable;
       audit_events: {
         Row: AuditEventsRow;
         Insert: AuditEventsInsert;
@@ -138,53 +145,69 @@ export interface Database {
         };
         Returns: Json;
       };
-      create_budget_driver_set_from_baseline: {
-        Args: {
-          target_organisation_id: string;
-          target_budget_baseline_id: string;
-          target_actor_user_id: string;
-          driver_set_payload: Json;
-          create_reason?: string | null;
-        };
+      create_actuals_batch: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; batch_payload: Json; line_payloads: Json; create_reason?: string | null };
         Returns: Json;
       };
-      create_budget_driver: {
-        Args: {
-          target_organisation_id: string;
-          target_driver_set_id: string;
-          target_actor_user_id: string;
-          driver_payload: Json;
-          impact_payloads: Json;
-          create_reason?: string | null;
-        };
+      update_actuals_batch_draft: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_batch_id: string; batch_payload: Json; line_payloads: Json; update_reason?: string | null };
         Returns: Json;
       };
-      review_budget_driver_set: {
-        Args: {
-          target_organisation_id: string;
-          target_driver_set_id: string;
-          target_actor_user_id: string;
-          review_reason?: string | null;
-        };
+      transition_actuals_batch_status: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_batch_id: string; next_status: string; transition_reason?: string | null };
         Returns: Json;
       };
-      transition_budget_driver_lifecycle: {
-        Args: {
-          target_organisation_id: string;
-          target_budget_driver_id: string;
-          target_actor_user_id: string;
-          next_status: string;
-          transition_payload?: Json;
-          transition_reason?: string | null;
-        };
+      supersede_actuals_batch: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_batch_id: string; replacement_payload: Json; replacement_lines: Json; supersede_reason?: string | null };
         Returns: Json;
       };
-      refresh_budget_driver_set_totals: {
-        Args: {
-          target_organisation_id: string;
-          target_driver_set_id: string;
-        };
-        Returns: void;
+      create_variance_report: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; report_payload: Json; line_payloads: Json; create_reason?: string | null };
+        Returns: Json;
+      };
+      recalculate_variance_report: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_report_id: string; line_payloads: Json; recalculate_reason?: string | null };
+        Returns: Json;
+      };
+      lock_variance_report: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_report_id: string; lock_checksum: string; lock_reason?: string | null };
+        Returns: Json;
+      };
+      void_variance_report: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_report_id: string; void_reason?: string | null };
+        Returns: Json;
+      };
+      create_reforecast: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; reforecast_payload: Json; line_payloads: Json; impact_payloads: Json; create_reason?: string | null };
+        Returns: Json;
+      };
+      recalculate_reforecast: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_reforecast_id: string; reforecast_payload: Json; line_payloads: Json; impact_payloads: Json; recalculate_reason?: string | null };
+        Returns: Json;
+      };
+      transition_reforecast_status: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_reforecast_id: string; next_status: string; transition_reason?: string | null };
+        Returns: Json;
+      };
+      lock_reforecast: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_reforecast_id: string; snapshot_payload: Json; lock_checksum: string; lock_reason?: string | null };
+        Returns: Json;
+      };
+      create_forecast_driver: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; driver_payload: Json; line_payloads: Json; create_reason?: string | null };
+        Returns: Json;
+      };
+      update_forecast_driver_draft: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_driver_id: string; driver_payload: Json; line_payloads: Json; update_reason?: string | null };
+        Returns: Json;
+      };
+      transition_forecast_driver_status: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_driver_id: string; next_status: string; transition_reason?: string | null };
+        Returns: Json;
+      };
+      supersede_forecast_driver: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_driver_id: string; replacement_payload: Json; replacement_lines: Json; supersede_reason?: string | null };
+        Returns: Json;
       };
       transition_layer1_handoff_status: {
         Args: {

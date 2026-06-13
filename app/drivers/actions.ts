@@ -1,7 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { requireUserContext } from '../../lib/auth/session';
+import {
+  createForecastDriver,
+  supersedeForecastDriver,
+  transitionForecastDriverStatus,
+  updateForecastDriverDraft
+} from '../../lib/repositories/forecast-drivers';
 
 function valuesFrom(formData: FormData): Record<string, unknown> {
   const values: Record<string, unknown> = {};
@@ -9,32 +16,37 @@ function valuesFrom(formData: FormData): Record<string, unknown> {
   return values;
 }
 
-export async function createDriverSetAction(formData: FormData) {
-  const context = await requireUserContext();
-  const { createBudgetDriverSetFromBaseline } = await import('../../lib/repositories/budget-drivers-mutations');
-  await createBudgetDriverSetFromBaseline(context, valuesFrom(formData));
-  revalidatePath('/drivers');
-}
-
-export async function createDriverAction(formData: FormData) {
-  const context = await requireUserContext();
-  const { createBudgetDriver } = await import('../../lib/repositories/budget-drivers-mutations');
-  await createBudgetDriver(context, valuesFrom(formData));
-  revalidatePath('/drivers');
-}
-
-export async function transitionDriverLifecycleAction(formData: FormData) {
-  const context = await requireUserContext();
-  const driverId = String(formData.get('driver_id') ?? '');
-  const { transitionBudgetDriverLifecycle } = await import('../../lib/repositories/budget-drivers-mutations');
-  await transitionBudgetDriverLifecycle(context, valuesFrom(formData));
+function revalidateDrivers(driverId?: string) {
   revalidatePath('/drivers');
   if (driverId) revalidatePath(`/drivers/${driverId}`);
 }
 
-export async function reviewDriverSetAction(formData: FormData) {
+export async function createDriverAction(formData: FormData) {
   const context = await requireUserContext();
-  const { reviewBudgetDriverSet } = await import('../../lib/repositories/budget-drivers-mutations');
-  await reviewBudgetDriverSet(context, String(formData.get('driver_set_id') ?? ''), String(formData.get('review_notes') ?? ''));
-  revalidatePath('/drivers');
+  const driverId = await createForecastDriver(context, valuesFrom(formData));
+  revalidateDrivers(driverId);
+  if (driverId) redirect(`/drivers/${driverId}`);
+}
+
+export async function updateDriverDraftAction(formData: FormData) {
+  const context = await requireUserContext();
+  const driverId = String(formData.get('forecast_driver_id') ?? '');
+  await updateForecastDriverDraft(context, driverId, valuesFrom(formData));
+  revalidateDrivers(driverId);
+}
+
+export async function transitionDriverStatusAction(formData: FormData) {
+  const context = await requireUserContext();
+  const driverId = String(formData.get('forecast_driver_id') ?? '');
+  const nextStatus = String(formData.get('next_status') ?? '');
+  await transitionForecastDriverStatus(context, driverId, nextStatus, String(formData.get('reason') ?? ''));
+  revalidateDrivers(driverId);
+}
+
+export async function supersedeDriverAction(formData: FormData) {
+  const context = await requireUserContext();
+  const driverId = String(formData.get('forecast_driver_id') ?? '');
+  const replacementId = await supersedeForecastDriver(context, driverId, valuesFrom(formData));
+  revalidateDrivers(driverId);
+  if (replacementId) redirect(`/drivers/${replacementId}`);
 }

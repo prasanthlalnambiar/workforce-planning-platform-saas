@@ -28,13 +28,20 @@ const governedBusinessTables = [
   'budget_baselines',
   'budget_baseline_lines',
   'budget_baseline_snapshots',
-  'budget_driver_sets',
-  'budget_drivers',
-  'budget_driver_monthly_impacts',
+  'forecast_drivers',
+  'forecast_driver_lines',
+  'reforecasts',
+  'reforecast_lines',
+  'reforecast_driver_impacts',
+  'reforecast_snapshots',
+  'actuals_batches',
+  'actuals_lines',
+  'variance_reports',
+  'variance_lines',
   'audit_events'
 ];
 
-test('migrations are ordered and cumulative from zero through Phase 5', () => {
+test('Phase 4.1 migrations are ordered and cumulative from zero', () => {
   assert.deepEqual(migrationFiles, [
     '001_phase1_foundation.sql',
     '002_phase1_1_hardening.sql',
@@ -43,7 +50,10 @@ test('migrations are ordered and cumulative from zero through Phase 5', () => {
     '005_phase3_1_layer1_governance_hardening.sql',
     '006_phase4_budget_baseline_module.sql',
     '007_phase4_1_commercial_qa_hardening.sql',
-    '008_phase5_driver_layer.sql'
+    '008_phase5_driver_layer.sql',
+    '009_phase6_reforecast_module.sql',
+    '010_phase7_actuals_variance.sql',
+    '011_phase7_1_governance_uat_hardening.sql'
   ]);
 });
 
@@ -60,10 +70,22 @@ test('service-role-only governance RPCs are not executable by anon or authentica
     'transition_layer1_handoff_status_controlled\\(uuid, uuid, uuid, uuid, text, text\\)',
     'create_budget_baseline_draft\\(uuid, uuid, jsonb, jsonb, text\\)',
     'lock_budget_baseline\\(uuid, uuid, uuid, uuid, uuid, jsonb, text, text\\)',
-    'create_budget_driver_set_from_baseline\\(uuid, uuid, uuid, jsonb, text\\)',
-    'create_budget_driver\\(uuid, uuid, uuid, jsonb, jsonb, text\\)',
-    'review_budget_driver_set\\(uuid, uuid, uuid, text\\)',
-    'transition_budget_driver_lifecycle\\(uuid, uuid, uuid, text, jsonb, text\\)'
+    'create_forecast_driver\\(uuid, uuid, jsonb, jsonb, text\\)',
+    'update_forecast_driver_draft\\(uuid, uuid, uuid, jsonb, jsonb, text\\)',
+    'transition_forecast_driver_status\\(uuid, uuid, uuid, text, text\\)',
+    'supersede_forecast_driver\\(uuid, uuid, uuid, jsonb, jsonb, text\\)',
+    'create_reforecast\\(uuid, uuid, jsonb, jsonb, jsonb, text\\)',
+    'recalculate_reforecast\\(uuid, uuid, uuid, jsonb, jsonb, jsonb, text\\)',
+    'transition_reforecast_status\\(uuid, uuid, uuid, text, text\\)',
+    'lock_reforecast\\(uuid, uuid, uuid, jsonb, text, text\\)',
+    'create_actuals_batch\\(uuid, uuid, jsonb, jsonb, text\\)',
+    'update_actuals_batch_draft\\(uuid, uuid, uuid, jsonb, jsonb, text\\)',
+    'transition_actuals_batch_status\\(uuid, uuid, uuid, text, text\\)',
+    'supersede_actuals_batch\\(uuid, uuid, uuid, jsonb, jsonb, text\\)',
+    'create_variance_report\\(uuid, uuid, jsonb, jsonb, text\\)',
+    'recalculate_variance_report\\(uuid, uuid, uuid, jsonb, text\\)',
+    'lock_variance_report\\(uuid, uuid, uuid, text, text\\)',
+    'void_variance_report\\(uuid, uuid, uuid, text\\)'
   ];
 
   for (const signature of serviceOnlyFunctions) {
@@ -90,10 +112,7 @@ test('tenant consistency guardrails cover guessed UUID cross-organisation refere
     /FOREIGN KEY \(organisation_id, source_id\) REFERENCES public\.source_inventory\(organisation_id, id\)/,
     /FOREIGN KEY \(organisation_id, approved_calculation_run_id\) REFERENCES public\.calculation_runs\(organisation_id, id\)/,
     /FOREIGN KEY \(organisation_id, source_layer1_handoff_id\) REFERENCES public\.layer1_handoff_objects\(organisation_id, id\)/,
-    /FOREIGN KEY \(organisation_id, budget_baseline_id\) REFERENCES public\.budget_baselines\(organisation_id, id\)/,
-    /FOREIGN KEY \(organisation_id, driver_set_id\) REFERENCES public\.budget_driver_sets\(organisation_id, id\)/,
-    /FOREIGN KEY \(organisation_id, budget_driver_id\) REFERENCES public\.budget_drivers\(organisation_id, id\)/,
-    /FOREIGN KEY \(organisation_id, budget_baseline_line_id\) REFERENCES public\.budget_baseline_lines\(organisation_id, id\)/
+    /FOREIGN KEY \(organisation_id, budget_baseline_id\) REFERENCES public\.budget_baselines\(organisation_id, id\)/
   ];
 
   for (const guard of requiredCompositeGuards) {

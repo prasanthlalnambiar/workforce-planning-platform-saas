@@ -144,6 +144,7 @@ Auth and tenant checks remain inside the protected pages and server-side reposit
 
 The following are deliberately not built yet:
 
+- driver layer
 - reforecast engine
 - actuals ingestion
 - variance reporting
@@ -169,21 +170,6 @@ Monthly phasing rules:
 - budget, labour cost and workload hours must reconcile back to annual totals within a small rounding tolerance
 - once locked, the baseline header, monthly lines and snapshot are immutable
 - Phase 4 prevents locking a second baseline for the same organisation, plan and fiscal year. Controlled baseline supersession is a later enhancement.
-
-## Driver Layer notes
-
-Phase 5 converts a locked budget baseline into governed growth, efficiency, cost change, supply change and management adjustment drivers.
-
-Driver rules:
-
-- driver packs can only be created from locked immutable budget baselines and group evidence for review
-- individual drivers carry the source-of-truth lifecycle: `draft`, `proposed`, `approved`, `superseded`, `voided`
-- proposed drivers are scenario-only and do not feed official impact
-- approved drivers feed official driver impact and become immutable
-- approved drivers must be superseded rather than silently edited or voided
-- drivers are monthly phased across the 12 baseline periods
-- material driver actions are routed through service-role RPCs and audit events
-- Phase 5 does not create reforecast locks, actuals, variance, waterfall or AI outputs
 
 ## Layer 1 calculation notes
 
@@ -221,12 +207,45 @@ Important: if one-off work is included, Phase 2 shows it inside the selected mod
 - Tenant scoping is enforced through repository queries, database guardrails and Supabase RLS policies
 - Material actions write audit events through controlled server-side services
 - Deterministic calculations are authoritative
-- AI is not implemented in Phase 5
+- AI is not implemented in Phase 4
 - Calculation logic is isolated in testable modules and not buried in UI components
 - Locked Layer 1 snapshots and handoff payloads are immutable
 - Locked budget baseline headers, lines and snapshots are immutable
-- Approved drivers and official monthly impact rows are immutable; approved drivers must be superseded rather than silently edited
-- Phase 5 stops at the driver layer; reforecast locks, actuals, variance, waterfall and AI are not implemented yet
+- Phase 4 stops at locked budget baseline; drivers and reforecasting are not implemented yet
+- Phase 4.1 adds proof and hardening only; no Phase 5 features are implemented
+
+### Implemented in Phase 5
+
+Phase 5 builds the Driver Layer and stops at the governed driver register (see `docs/phase5-driver-layer.md`):
+
+- forecast driver register attached to a locked budget baseline
+- five driver categories: growth, efficiency, cost change, supply change, management adjustment
+- three impact types with explicit signed annual amounts: FTE, cost and workload hours deltas
+- deterministic server-side phasing: straight line, ramp up, ramp down and one-off, with residual rounding in the final active period
+- phased lines always reconcile to the annual amount, enforced in the engine and re-checked in the database RPC
+- driver status governance: draft, proposed, approved, plus revert, void and controlled supersede
+- approved drivers are immutable at the database level; changes go through atomic supersede with audit on both records
+- only approved drivers feed the official forecast position; proposed drivers feed scenarios only
+- read-only indicative impact preview of baseline plus approved drivers (official) and plus proposed drivers (scenario)
+- driver permissions wired into the existing role model and enforced again inside service-role-only RPCs
+- audit events for create, update, propose, revert, approve, void and supersede written in-transaction
+
+Phase 5 does not build reforecast locks, actuals ingestion, variance analysis, waterfall reporting or AI. The impact preview is indicative only and never creates or locks a forecast object; the governed reforecast is Phase 6.
+
+### Implemented in Phase 6
+
+- **Reforecast Module**: the working forecast is calculated deterministically as the locked budget baseline plus approved drivers, broken down by driver category per monthly period. Proposed drivers are scenario-only and never feed the official forecast.
+- **Forecast lock governance**: draft → in_review → locked lifecycle with immutable locked forecasts, checksummed append-only lock snapshots, supersession of the previous current locked forecast, and admin-controlled voiding. The latest locked forecast is the single current valid forecast per baseline context.
+- **Full audit**: create, recalculate, submit, revert, lock, supersede, void, driver-inclusion and lock-snapshot events are written in-transaction by service-role-only RPCs.
+- Actuals ingestion, variance analysis, waterfall reporting and AI advisory remain future phases (placeholders only), enforced by a phase-boundary contract test.
+
+### Implemented in Phase 7
+
+- **Actuals ingestion**: actual results load against a locked baseline via strict CSV or manual-grid entry; every row must map exactly to an existing planning period — unmapped, duplicate or malformed rows are rejected, never silently re-assigned.
+- **Versioned actuals**: draft → validated → posted lifecycle; posted batches are immutable and corrections atomically post a superseding version with full lineage. The latest posted version feeds new variance runs while old reports stay pinned to the version they used.
+- **Variance analysis**: deterministic actual − comparator calculation per month against a pinned locked forecast version (lock version + checksum) and the locked baseline, covering cost (with safe percentages), FTE and workload hours. Later forecast locks never rewrite existing variance reports.
+- **Variance governance**: draft reports recalculate deterministically from pinned inputs; locked reports are immutable with checksums, supersession and admin-controlled voiding. Thirteen new audit event types; all writes via service-role-only RPCs.
+- Waterfall bridges, executive bridge reporting and AI advisory remain future phases (placeholders only), enforced by the phase-boundary contract test. A live RLS isolation smoke script (`scripts/smoke-rls-phase7.mjs`) is included, environment-gated.
 
 ## Tech stack
 
@@ -247,7 +266,7 @@ workforce-planning-platform-saas/
 ├── docs/                        # Phase documentation
 ├── lib/                         # Supabase clients, repositories, audit, tenant, permission and calculation services
 ├── supabase/migrations/         # Database schema, functions, triggers and RLS policies
-├── tests/                       # Unit tests for foundation, Layer 1, Budget Baseline and Driver Layer logic
+├── tests/                       # Unit tests for foundation, Layer 1 and Budget Baseline logic
 ├── types/                       # TypeScript domain and database types
 ├── .env.example                 # Safe environment variable template
 ├── .gitignore                   # Git exclusions for secrets and build artefacts
@@ -288,7 +307,6 @@ supabase/migrations/004_phase3_layer1_approval_lock_handoff.sql
 supabase/migrations/005_phase3_1_layer1_governance_hardening.sql
 supabase/migrations/006_phase4_budget_baseline_module.sql
 supabase/migrations/007_phase4_1_commercial_qa_hardening.sql
-supabase/migrations/008_phase5_driver_layer.sql
 ```
 
 The migrations create and harden:
@@ -304,7 +322,6 @@ The migrations create and harden:
 - Layer 1 Phase 3 approval, lock, snapshot and handoff support
 - Layer 1 Phase 3.1 transaction-safe lock/handoff RPC and controlled handoff transitions
 - Phase 4 budget baseline tables, monthly lines, immutable snapshots, controlled baseline RPCs and lock guards
-- Phase 5 driver packs, structured driver lifecycle, monthly impact phasing, approved-driver immutability and controlled driver RPCs
 
 ## Local development
 
