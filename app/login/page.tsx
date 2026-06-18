@@ -9,7 +9,7 @@ export default function LoginPage() {
   return (
     <main className="login-shell">
       <section className="card login-card">
-        <p className="eyebrow">Phase 1 SaaS foundation</p>
+        <p className="eyebrow">Workforce planning</p>
         <h1>Sign in</h1>
         <p className="lede">Use Supabase Auth to access the tenant-scoped workspace.</p>
         {configured ? (

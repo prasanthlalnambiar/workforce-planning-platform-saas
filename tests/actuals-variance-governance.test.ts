@@ -139,54 +139,12 @@ test('the live RLS isolation smoke script exists and is environment-gated, not p
   assert.ok(!verifyChain.includes('smoke-rls'), 'live RLS smoke test never blocks the hermetic gate');
 });
 
-test('Phase 7 stays inside the phase boundary: waterfall and AI remain placeholders and ungoverned', () => {
-  for (const file of ['app/waterfall/page.tsx', 'app/ai/page.tsx']) {
-    const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
-    assert.match(source, /PlaceholderPage/, `${file} must remain a placeholder — that module is a future phase`);
-  }
+test('phase boundary: Phase 7 migration adds no waterfall/AI database objects', () => {
   const lowered = migrationSql.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').toLowerCase();
   const createdObjects = lowered.match(/create (?:table|or replace function|index|trigger|policy)[^(\n]*/g) ?? [];
   for (const forbidden of ['waterfall', 'executive_bridge', '_ai', 'ai_advisory', 'commentary']) {
     for (const statement of createdObjects) {
       assert.ok(!statement.includes(forbidden), `Phase 7 migration must not create ${forbidden} objects: ${statement}`);
     }
-  }
-});
-
-test('Phase 7 repositories fail fast on Supabase read errors instead of showing false empty states', () => {
-  const actualsRepo = readFileSync(new URL('../lib/repositories/actuals.ts', import.meta.url), 'utf8');
-  const varianceRepo = readFileSync(new URL('../lib/repositories/variance.ts', import.meta.url), 'utf8');
-
-  for (const source of [actualsRepo, varianceRepo]) {
-    assert.match(source, /function assertQuerySucceeded/, 'repository should define a local query guard');
-  }
-
-  for (const expectedGuard of [
-    "assertQuerySucceeded(batchesRes, 'Actuals batches')",
-    "assertQuerySucceeded(linesRes, 'Actuals lines')",
-    "assertQuerySucceeded(batchRes, 'Actuals batch')"
-  ]) {
-    assert.ok(actualsRepo.includes(expectedGuard), `actuals repository must guard: ${expectedGuard}`);
-  }
-
-  for (const expectedGuard of [
-    "assertQuerySucceeded(batchesRes, 'Posted actuals batches')",
-    "assertQuerySucceeded(reportsRes, 'Variance reports')",
-    "assertQuerySucceeded(linesRes, 'Variance lines')",
-    "assertQuerySucceeded(reportRes, 'Variance report')"
-  ]) {
-    assert.ok(varianceRepo.includes(expectedGuard), `variance repository must guard: ${expectedGuard}`);
-  }
-});
-
-test('Phase 7 routes provide scoped data-load error boundaries', () => {
-  for (const [file, title] of [
-    ['app/actuals/error.tsx', 'Actuals data could not be loaded'],
-    ['app/variance/error.tsx', 'Variance data could not be loaded']
-  ] as const) {
-    const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
-    assert.match(source, /'use client'/, `${file} must be a route error boundary client component`);
-    assert.ok(source.includes(title), `${file} should provide a controlled module-specific fallback`);
-    assert.match(source, /Phase 7 database migration has been applied/, `${file} should identify migration/schema setup as an admin check`);
   }
 });

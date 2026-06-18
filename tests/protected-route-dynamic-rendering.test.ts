@@ -31,7 +31,9 @@ const protectedPages = [
   'app/actuals/page.tsx',
   'app/variance/page.tsx',
   'app/waterfall/page.tsx',
-  'app/ai/page.tsx'
+  'app/waterfall/[varianceReportId]/page.tsx',
+  'app/ai/page.tsx',
+  'app/ai/[varianceReportId]/page.tsx'
 ];
 
 const protectedRouteHandlers = [

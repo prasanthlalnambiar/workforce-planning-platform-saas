@@ -88,7 +88,7 @@ export function ActualsBoundaryNote() {
   return (
     <p className="small-note">
       Posted actuals are immutable; corrections create a new version. Actuals must map to existing planning periods —
-      unmapped rows are rejected, never silently re-assigned. Waterfall reporting and AI commentary are future phases.
+      unmapped rows are rejected, never silently re-assigned. Waterfall and Planning Advisor are available in Track.
     </p>
   );
 }
@@ -98,7 +98,7 @@ export function VarianceBoundaryNote() {
     <p className="small-note">
       Variance is pinned to the selected locked forecast version. Later forecast locks do not rewrite this variance
       report. Sign convention: positive cost variance = actual above the comparator (over forecast / over baseline).
-      Waterfall reporting and AI commentary are future phases.
+      Planning Advisor is available in Track.
     </p>
   );
 }

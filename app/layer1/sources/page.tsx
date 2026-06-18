@@ -18,7 +18,7 @@ export default async function SourcesPage({ searchParams }: { searchParams?: Lay
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Layer 1 evidence" title="Source inventory" badge="Phase 2">
+        <PageHeader eyebrow="Source quality" title="Source inventory" badge="Demand">
           Capture where demand signals come from, how complete they are and how much confidence the model should place in them.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />

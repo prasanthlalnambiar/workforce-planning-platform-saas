@@ -35,25 +35,46 @@ test('CI captures build output and uses route diagnostics instead of a naive leg
   assert.doesNotMatch(workflow, /grep -q "○"/);
 });
 
-test('verify is a flat shell chain of the standalone gate commands with no custom orchestrator', () => {
+test('verify delegates to a simple shell script that runs the gates and exits explicitly, with audit kept out of verify', () => {
   const packageData = JSON.parse(packageJson);
-  const verifyChain = packageData.scripts.verify;
-  // Each step is exactly the command that is verified standalone; && chaining
-  // gives deterministic exit handling: any failure halts the chain.
-  const expectedSteps = [
-    'npm test',
-    'npm run typecheck',
-    'npm run lint',
-    'npm run build',
-    'npm run inspect:routes -- --build-output build-output.log',
-    'npm audit --audit-level=low'
-  ];
-  assert.equal(verifyChain, expectedSteps.join(' && '));
-  // Build runs before route diagnostics, so verify never depends on a stale build.
-  assert.ok(verifyChain.indexOf('npm run build') < verifyChain.indexOf('--build-output'));
-  // No bespoke verify orchestrator process exists to diverge from the
-  // standalone build path.
+  const scripts = packageData.scripts;
+  // The package verify script delegates to a minimal bash script. `npm audit`
+  // is intentionally NOT inside verify: an npm child invoked from within the
+  // verify sequence was the external-runner hang. Audit still runs as its own
+  // gate step (`npm audit --audit-level=low`) separately from verify. Tests run
+  // last so nothing is sequenced after the test process.
+  assert.equal(scripts.verify, 'bash scripts/verify.sh');
+  // The Node verify wrapper must NOT exist — it was part of an earlier hang.
   assert.equal(existsSync(new URL('../scripts/verify.mjs', import.meta.url)), false);
+
+  const verifyShell = readFileSync(new URL('../scripts/verify.sh', import.meta.url), 'utf8');
+  // Strict bash so any failing step aborts the script with its own non-zero code.
+  assert.match(verifyShell, /set -euo pipefail/);
+  // npm audit must NOT run inside verify.
+  assert.ok(!verifyShell.includes('npm audit'), 'npm audit is not run inside verify');
+  // The five verify steps are present, in order: typecheck, lint, build (never
+  // skipped), route diagnostics against build-output.log, tests (never skipped).
+  const orderedFragments = [
+    'node_modules/.bin/tsc --noEmit',
+    'node_modules/.bin/eslint . --max-warnings=0',
+    'node scripts/build.mjs',
+    'node scripts/inspect-routes.mjs --build-output build-output.log',
+    'node --import tsx --test tests/*.test.ts'
+  ];
+  let lastIndex = -1;
+  for (const fragment of orderedFragments) {
+    const index = verifyShell.indexOf(fragment);
+    assert.ok(index > lastIndex, `verify step present and ordered: ${fragment}`);
+    lastIndex = index;
+  }
+  // Tests are the final gate; nothing runs after them except the success exit.
+  assert.ok(verifyShell.indexOf('node --import tsx --test') > verifyShell.indexOf('inspect-routes.mjs'), 'tests run last');
+  // Build precedes route diagnostics, which consume the build output file.
+  assert.ok(verifyShell.indexOf('node scripts/build.mjs') < verifyShell.indexOf('inspect-routes.mjs'), 'diagnostics run after the build');
+  assert.match(verifyShell, /exit 0/, 'explicit success exit');
+  // No nested `npm run build` (npm-in-npm) and no Node spawn wrapper.
+  assert.ok(!verifyShell.includes('npm run build'), 'no nested npm run build');
+  assert.ok(!verifyShell.includes('spawnSync'), 'no Node spawn wrapper');
 });
 
 test('the production build wrapper owns build-output.log without captured pipes', () => {
@@ -77,12 +98,14 @@ test('Next internal build validation is separated from mandatory standalone gate
   assert.match(workflow, /npm run build/);
   assert.ok(workflow.indexOf('npm run typecheck') < workflow.indexOf('npm run build'));
   assert.ok(workflow.indexOf('npm run lint') < workflow.indexOf('npm run build'));
-  const verifyChain = JSON.parse(packageJson).scripts.verify;
-  assert.ok(verifyChain.includes('npm run typecheck'));
-  assert.ok(verifyChain.includes('npm run lint'));
-  assert.ok(verifyChain.includes('npm run build'));
-  assert.ok(verifyChain.indexOf('npm run typecheck') < verifyChain.indexOf('npm run build'));
-  assert.ok(verifyChain.indexOf('npm run lint') < verifyChain.indexOf('npm run build'));
+  const verifyShell = readFileSync(new URL('../scripts/verify.sh', import.meta.url), 'utf8');
+  // Typecheck and lint run before the build inside verify; the standalone
+  // typecheck and lint gates (run separately and in CI) remain authoritative.
+  assert.ok(verifyShell.includes('node_modules/.bin/tsc --noEmit'));
+  assert.ok(verifyShell.includes('node_modules/.bin/eslint . --max-warnings=0'));
+  assert.ok(verifyShell.includes('node scripts/build.mjs'));
+  assert.ok(verifyShell.indexOf('node_modules/.bin/tsc') < verifyShell.indexOf('node scripts/build.mjs'));
+  assert.ok(verifyShell.indexOf('node_modules/.bin/eslint') < verifyShell.indexOf('node scripts/build.mjs'));
 });
 
 test('Next page-data collection uses deterministic single-lane workers', () => {

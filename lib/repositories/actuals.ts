@@ -7,24 +7,19 @@ import {
   type ActualsLineDraft,
   type PlanningPeriodRef
 } from '../variance/variance-engine';
+import { round2 } from '../drivers/driver-engine';
 import { hasPermission, requirePermission } from '../permissions/permissions';
 import { createAdminClient } from '../supabase/admin';
 import { createClient } from '../supabase/server';
+import { maybe, rows } from './read-result';
 import type { Json } from '../../types/database';
 import type { UserContext } from '../../types/models';
 
 type JsonRecord = Record<string, unknown>;
-type QueryResult = { error: { message?: string } | null };
 
 function numberFrom(value: unknown, fallback = 0): number {
   const parsed = Number(value ?? fallback);
   return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function assertQuerySucceeded(result: QueryResult, label: string): void {
-  if (result.error) {
-    throw new Error(`${label} query failed: ${result.error.message ?? 'Unknown Supabase error'}`);
-  }
 }
 
 export function canReadActuals(context: UserContext): boolean {
@@ -57,8 +52,7 @@ export async function getHorizonPeriods(context: UserContext, fiscalYearId: stri
     .eq('organisation_id', context.organisationId)
     .eq('fiscal_year_id', fiscalYearId)
     .order('period_number', { ascending: true });
-  assertQuerySucceeded(periodsRes, 'Planning periods');
-  return ((periodsRes.data ?? []) as JsonRecord[]).map((period) => ({
+  return rows<JsonRecord>('the planning periods', periodsRes as never).map((period) => ({
     id: String(period.id),
     periodNumber: numberFrom(period.period_number),
     periodStart: String(period.period_start),
@@ -83,9 +77,9 @@ function manualRowsToLines(periods: PlanningPeriodRef[], rows: ManualActualsRow[
       periodNumber: period?.periodNumber ?? -1,
       periodStart: period?.periodStart ?? '1970-01-01',
       periodEnd: period?.periodEnd ?? '1970-01-01',
-      actualCost: row.actualCost,
-      actualFte: row.actualFte,
-      actualWorkloadHours: row.actualWorkloadHours,
+      actualCost: Number.isFinite(row.actualCost) ? round2(row.actualCost) : row.actualCost,
+      actualFte: Number.isFinite(row.actualFte) ? round2(row.actualFte) : row.actualFte,
+      actualWorkloadHours: Number.isFinite(row.actualWorkloadHours) ? round2(row.actualWorkloadHours) : row.actualWorkloadHours,
       sourceRowReference: `manual row ${index + 1}`
     };
   });
@@ -139,14 +133,12 @@ export async function createDraftActualsBatch(
   if (!batchName.trim()) throw new Error('Actuals batch name is required');
 
   const supabase = await createClient();
-  const baselineRes = await supabase
+  const { data: baseline } = await supabase
     .from('budget_baselines')
     .select('*')
     .eq('organisation_id', context.organisationId)
     .eq('id', baselineId)
     .maybeSingle();
-  assertQuerySucceeded(baselineRes, 'Budget baseline');
-  const baseline = baselineRes.data;
   if (!baseline) throw new Error('Budget baseline not found');
   const baselineRecord = baseline as JsonRecord;
   if (String(baselineRecord.status) !== 'locked') throw new Error('Actuals can only be loaded against a locked budget baseline');
@@ -155,14 +147,12 @@ export async function createDraftActualsBatch(
   // baseline. The database RPC enforces this independently; checking here too
   // gives the user a clear error before any write is attempted.
   if (reforecastId) {
-    const contextReforecastRes = await supabase
+    const { data: contextReforecast } = await supabase
       .from('reforecasts')
       .select('id, budget_baseline_id, plan_id, fiscal_year_id, status')
       .eq('organisation_id', context.organisationId)
       .eq('id', reforecastId)
       .maybeSingle();
-    assertQuerySucceeded(contextReforecastRes, 'Forecast context');
-    const contextReforecast = contextReforecastRes.data;
     const contextRecord = (contextReforecast ?? null) as JsonRecord | null;
     if (!contextRecord) throw new Error('Forecast context not found');
     if (String(contextRecord.budget_baseline_id) !== baselineId
@@ -203,14 +193,12 @@ export async function updateDraftActualsBatch(
 ): Promise<void> {
   requirePermission(context.roles, 'actuals:write');
   const supabase = await createClient();
-  const batchRes = await supabase
+  const { data: batch } = await supabase
     .from('actuals_batches')
     .select('*')
     .eq('organisation_id', context.organisationId)
     .eq('id', batchId)
     .maybeSingle();
-  assertQuerySucceeded(batchRes, 'Actuals batch');
-  const batch = batchRes.data;
   if (!batch) throw new Error('Actuals batch not found');
   const record = batch as JsonRecord;
   if (String(record.status) !== 'draft') throw new Error('Only draft actuals batches can be edited');
@@ -261,14 +249,12 @@ export async function supersedeActualsBatch(
 ): Promise<string> {
   requirePermission(context.roles, 'actuals:supersede');
   const supabase = await createClient();
-  const batchRes = await supabase
+  const { data: batch } = await supabase
     .from('actuals_batches')
     .select('*')
     .eq('organisation_id', context.organisationId)
     .eq('id', batchId)
     .maybeSingle();
-  assertQuerySucceeded(batchRes, 'Actuals batch');
-  const batch = batchRes.data;
   if (!batch) throw new Error('Actuals batch not found');
   const record = batch as JsonRecord;
   if (String(record.status) !== 'posted') throw new Error('Only posted actuals batches can be corrected by supersession');
@@ -309,13 +295,8 @@ export async function getActualsDashboard(context: UserContext): Promise<Actuals
     supabase.from('reforecasts').select('*').eq('organisation_id', orgId).in('status', ['locked', 'superseded']).order('locked_at', { ascending: false }),
     supabase.from('actuals_batches').select('*').eq('organisation_id', orgId).order('created_at', { ascending: false })
   ]);
-  assertQuerySucceeded(plansRes, 'Plans');
-  assertQuerySucceeded(fiscalYearsRes, 'Fiscal years');
-  assertQuerySucceeded(baselinesRes, 'Locked baselines');
-  assertQuerySucceeded(reforecastsRes, 'Locked reforecasts');
-  assertQuerySucceeded(batchesRes, 'Actuals batches');
 
-  const batches = (batchesRes.data ?? []) as JsonRecord[];
+  const batches = rows<JsonRecord>('the actuals register', batchesRes as never);
   const latestPostedByBaseline = new Map<string, JsonRecord>();
   for (const batch of batches) {
     if (String(batch.status) !== 'posted') continue;
@@ -327,10 +308,10 @@ export async function getActualsDashboard(context: UserContext): Promise<Actuals
   }
 
   return {
-    plans: (plansRes.data ?? []) as JsonRecord[],
-    fiscalYears: (fiscalYearsRes.data ?? []) as JsonRecord[],
-    lockedBaselines: (baselinesRes.data ?? []) as JsonRecord[],
-    lockedReforecasts: (reforecastsRes.data ?? []) as JsonRecord[],
+    plans: rows<JsonRecord>('plans', plansRes as never),
+    fiscalYears: rows<JsonRecord>('fiscal years', fiscalYearsRes as never),
+    lockedBaselines: rows<JsonRecord>('locked baselines', baselinesRes as never),
+    lockedReforecasts: rows<JsonRecord>('locked forecasts', reforecastsRes as never),
     batches,
     latestPostedByBaseline
   };
@@ -357,13 +338,12 @@ export async function getActualsBatchDetail(context: UserContext, batchId: strin
     .eq('organisation_id', orgId)
     .eq('id', batchId)
     .maybeSingle();
-  assertQuerySucceeded(batchRes, 'Actuals batch');
-  const batch = batchRes.data;
 
+  const batch = maybe<JsonRecord>('this actuals batch', batchRes as never);
   if (!batch) {
     return { batch: null, lines: [], baseline: null, periods: [], auditEvents: [], supersedes: null, supersededBy: null };
   }
-  const record = batch as JsonRecord;
+  const record = batch;
 
   const [linesRes, baselineRes, auditRes, periods] = await Promise.all([
     supabase.from('actuals_lines').select('*').eq('organisation_id', orgId).eq('actuals_batch_id', batchId).order('period_number', { ascending: true }),
@@ -371,23 +351,19 @@ export async function getActualsBatchDetail(context: UserContext, batchId: strin
     supabase.from('audit_events').select('*').eq('organisation_id', orgId).eq('entity_type', 'actuals_batch').eq('entity_id', batchId).order('created_at', { ascending: false }).limit(50),
     getHorizonPeriods(context, String(record.fiscal_year_id))
   ]);
-  assertQuerySucceeded(linesRes, 'Actuals lines');
-  assertQuerySucceeded(baselineRes, 'Actuals baseline');
-  assertQuerySucceeded(auditRes, 'Actuals audit events');
 
   async function related(id: unknown): Promise<JsonRecord | null> {
     if (!id) return null;
-    const relatedRes = await supabase.from('actuals_batches').select('*').eq('organisation_id', orgId).eq('id', String(id)).maybeSingle();
-    assertQuerySucceeded(relatedRes, 'Related actuals batch');
-    return (relatedRes.data as JsonRecord) ?? null;
+    const { data } = await supabase.from('actuals_batches').select('*').eq('organisation_id', orgId).eq('id', String(id)).maybeSingle();
+    return (data as JsonRecord) ?? null;
   }
 
   return {
     batch: record,
-    lines: (linesRes.data ?? []) as JsonRecord[],
-    baseline: (baselineRes.data as JsonRecord) ?? null,
+    lines: rows<JsonRecord>('the actuals rows', linesRes as never),
+    baseline: maybe<JsonRecord>('the baseline', baselineRes as never),
     periods,
-    auditEvents: (auditRes.data ?? []) as JsonRecord[],
+    auditEvents: rows<JsonRecord>('the actuals audit trail', auditRes as never),
     supersedes: await related(record.supersedes_batch_id),
     supersededBy: await related(record.superseded_by_batch_id)
   };

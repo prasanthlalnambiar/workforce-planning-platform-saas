@@ -67,8 +67,8 @@ export default async function Layer1ReviewPage({ searchParams }: { searchParams?
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Layer 1 governance" title="Approval, lock and handoff readiness" badge="Phase 3">
-          Review the deterministic Layer 1 model, submit it for approval, lock an immutable version and prepare a governed handoff for future Layer 2 baseline setup.
+        <PageHeader eyebrow="Forecast output" title="Approval, lock and handoff readiness" badge="Governed">
+          Review the deterministic demand model, submit it for approval, lock an immutable version and prepare a governed handoff for budget baseline setup.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />
         {data.plan ? <Layer1Subnav planId={data.plan.id} /> : <EmptyPlanState />}
@@ -79,8 +79,8 @@ export default async function Layer1ReviewPage({ searchParams }: { searchParams?
                 <p className="eyebrow">Governed planning input</p>
                 <h2>{data.plan.name}</h2>
                 <p>
-                  Layer 1 is now treated as a controlled input to planning governance. The lock preserves the calculation, assumptions,
-                  demand evidence and risk context. Phase 3 stops at <strong>ready for Layer 2</strong>; it does not import a budget baseline yet.
+                  The demand model is now treated as a controlled input to planning governance. The lock preserves the calculation, assumptions,
+                  demand evidence and risk context. This stops at <strong>ready for baseline</strong>; it does not import a budget baseline yet.
                 </p>
               </div>
               <div className="status-panel">
@@ -113,7 +113,7 @@ export default async function Layer1ReviewPage({ searchParams }: { searchParams?
                   <input type="hidden" name="plan_id" value={data.plan.id} />
                   <input type="hidden" name="calculation_run_id" value={String(run?.id ?? '')} />
                   <label className="field wide"><span>Approval notes</span><textarea name="approval_notes" placeholder="Approval rationale, caveats or open risks." /></label>
-                  <button className="button" disabled={!userCanApprove || String(run?.run_status ?? '') !== 'submitted_for_review'} type="submit">Approve Layer 1 run</button>
+                  <button className="button" disabled={!userCanApprove || String(run?.run_status ?? '') !== 'submitted_for_review'} type="submit">Approve demand run</button>
                 </form>
               </ActionPanel>
               <ActionPanel title="3. Lock approved version">
@@ -125,13 +125,13 @@ export default async function Layer1ReviewPage({ searchParams }: { searchParams?
                   <button className="button" disabled={!userCanLock || String(run?.run_status ?? '') !== 'approved'} type="submit">Lock version and create handoff</button>
                 </form>
               </ActionPanel>
-              <ActionPanel title="4. Mark ready for Layer 2">
-                <p className="small-note">Governance readiness only. Phase 3 does not build the budget baseline import.</p>
+              <ActionPanel title="4. Mark ready for baseline">
+                <p className="small-note">Governance readiness only. This step does not build the budget baseline import.</p>
                 <form className="form-grid single" action={markLayer1HandoffReadyForLayer2Action}>
                   <input type="hidden" name="plan_id" value={data.plan.id} />
                   <input type="hidden" name="handoff_id" value={String(latestHandoff?.id ?? '')} />
-                  <label className="field wide"><span>Readiness notes</span><textarea name="ready_notes" placeholder="What should Layer 2 consume later?" /></label>
-                  <button className="button" disabled={!userCanLock || String(latestHandoff?.handoff_status ?? '') !== 'locked'} type="submit">Mark ready for Layer 2</button>
+                  <label className="field wide"><span>Readiness notes</span><textarea name="ready_notes" placeholder="What should the budget baseline consume later?" /></label>
+                  <button className="button" disabled={!userCanLock || String(latestHandoff?.handoff_status ?? '') !== 'locked'} type="submit">Mark ready for baseline</button>
                 </form>
               </ActionPanel>
             </section>
@@ -209,10 +209,10 @@ export default async function Layer1ReviewPage({ searchParams }: { searchParams?
             </section>
 
             <section className="card">
-              <h2>Layer 1 audit trail</h2>
+              <h2>Demand model audit trail</h2>
               <div className="timeline-list">
                 {data.auditEvents.map((event) => <article key={String(event.id)}><strong>{String(event.event_type)}</strong><span>{displayDate(event.created_at)} · {String(event.reason ?? 'No reason supplied')}</span></article>)}
-                {data.auditEvents.length === 0 ? <p>No Layer 1 audit events yet.</p> : null}
+                {data.auditEvents.length === 0 ? <p>No demand model audit events yet.</p> : null}
               </div>
             </section>
           </>

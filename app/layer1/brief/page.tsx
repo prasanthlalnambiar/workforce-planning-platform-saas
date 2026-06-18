@@ -16,7 +16,7 @@ export default async function PlanningBriefPage({ searchParams }: { searchParams
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Layer 1 setup" title="Planning brief" badge="Phase 2">
+        <PageHeader eyebrow="Demand inputs" title="Planning brief" badge="Demand">
           Define the planning question, decision owner, service target, budget target and boundaries before modelling demand.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />
