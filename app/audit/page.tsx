@@ -11,7 +11,7 @@ export default async function AuditPage() {
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Governance foundation" title="Audit Log" badge="Phase 1">
+        <PageHeader eyebrow="Governance foundation" title="Audit Log" badge="Tenant scoped">
           Every material action should write an organisation-scoped audit event. Later phases reuse this exact pattern.
         </PageHeader>
         <section className="card">

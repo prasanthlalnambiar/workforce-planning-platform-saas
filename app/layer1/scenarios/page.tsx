@@ -30,8 +30,8 @@ export default async function ScenarioComparisonPage({ searchParams }: { searchP
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Layer 1 scenarios" title="Scenario comparison" badge="Phase 2">
-          Compare deterministic demand, productivity, AI efficiency and finance-constrained views before any approval or Layer 2 handoff exists.
+        <PageHeader eyebrow="Scenarios" title="Scenario comparison" badge="Demand">
+          Compare deterministic demand, productivity, AI efficiency and finance-constrained views before any approval or baseline handoff exists.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />
         {data.plan ? <Layer1Subnav planId={data.plan.id} /> : <EmptyPlanState />}

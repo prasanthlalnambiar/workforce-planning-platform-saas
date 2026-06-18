@@ -11,7 +11,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "verify": "npm test && npm run typecheck && npm run lint && npm run build && npm run inspect:routes -- --build-output build-output.log && npm audit --audit-level=low",
+    "verify": "bash scripts/verify.sh",
     "inspect:routes": "node scripts/inspect-routes.mjs",
     "inspect": "node scripts/inspect-routes.mjs"
   },

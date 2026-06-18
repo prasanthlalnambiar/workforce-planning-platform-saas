@@ -50,7 +50,7 @@ export default async function ReforecastDetailPage({ params }: { params: Promise
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Phase 6 forecast governance" title={`${text(reforecast.reforecast_code)} · ${text(reforecast.reforecast_name)}`} badge="Phase 6">
+        <PageHeader eyebrow="Reforecast" title={`${text(reforecast.reforecast_code)} · ${text(reforecast.reforecast_name)}`} badge="Forecast">
           {isLocked
             ? 'This forecast is locked and immutable. Corrections require a new forecast version; locking a newer forecast supersedes this one.'
             : status === 'superseded'

@@ -28,10 +28,10 @@ export default async function VariancePage() {
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Phase 7 variance analysis" title="Variance" badge="Phase 7">
+        <PageHeader eyebrow="Variance" title="Variance" badge="Track">
           Variance compares posted actuals against a pinned locked forecast version and the locked baseline:
           variance = actual − comparator, so positive cost variance means actual cost ran above the comparator.
-          Waterfall bridges and AI commentary are future phases.
+          Waterfall bridges and Planning Advisor are available in Track.
         </PageHeader>
 
         <section className="grid-4">

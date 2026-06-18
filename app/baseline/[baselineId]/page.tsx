@@ -33,7 +33,7 @@ export default async function BudgetBaselineDetailPage({ params }: { params: Pro
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Budget baseline control" title={text(baseline.baseline_name, 'Budget baseline')} badge="Phase 4">
+        <PageHeader eyebrow="Budget baseline control" title={text(baseline.baseline_name, 'Budget baseline')} badge="Budget">
           Review the annual baseline, monthly phasing and reconciliation before locking the immutable Finance reference. This is still not a reforecast.
         </PageHeader>
 
@@ -61,11 +61,11 @@ export default async function BudgetBaselineDetailPage({ params }: { params: Pro
         <section className="grid-2">
           <article className="card cockpit-card">
             <p className="eyebrow">Source evidence</p>
-            <h2>{String(baseline.source_type) === 'layer1_handoff' ? 'Layer 1 approved planning input' : 'Manual Finance baseline'}</h2>
+            <h2>{String(baseline.source_type) === 'layer1_handoff' ? 'Approved planning input' : 'Manual Finance baseline'}</h2>
             {String(baseline.source_type) === 'layer1_handoff' ? (
-              <p>Imported from an approved and locked Layer 1 handoff. Values are drawn from the handoff JSON and are not recalculated during baseline creation.</p>
+              <p>Imported from an approved and locked planning handoff. Values are drawn from the handoff JSON and are not recalculated during baseline creation.</p>
             ) : (
-              <p>This baseline was manually entered. It remains separate from Layer 1-derived baselines and must be supported by the notes and audit trail.</p>
+              <p>This baseline was manually entered. It remains separate from planning-derived baselines and must be supported by the notes and audit trail.</p>
             )}
             <div className="kpi-grid">
               <div className="mini-card"><span>Source quality</span><strong>{num(baseline.source_quality_score, 0)}%</strong></div>

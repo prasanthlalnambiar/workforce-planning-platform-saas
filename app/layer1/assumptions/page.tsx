@@ -18,7 +18,7 @@ export default async function AssumptionsPage({ searchParams }: { searchParams?:
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Layer 1 assumptions" title="Capacity and cost assumptions" badge="Phase 2">
+        <PageHeader eyebrow="Capacity assumptions" title="Capacity and cost assumptions" badge="Demand">
           Define the monthly productive capacity per FTE, current supply and labour cost assumptions used by the deterministic engine.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />

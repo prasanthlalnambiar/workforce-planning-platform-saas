@@ -79,7 +79,7 @@ export default async function ActualsBatchDetailPage({ params }: { params: Promi
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Phase 7 actuals ingestion" title={`${text(batch.batch_code)} · ${text(batch.batch_name)}`} badge="Phase 7">
+        <PageHeader eyebrow="Actuals" title={`${text(batch.batch_code)} · ${text(batch.batch_name)}`} badge="Track">
           {isPosted
             ? 'These actuals are posted and immutable. Corrections create a new superseding version; the old version remains readable.'
             : status === 'superseded'

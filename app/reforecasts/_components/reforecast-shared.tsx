@@ -75,7 +75,7 @@ export function PhaseBoundaryNote() {
   return (
     <p className="small-note">
       Only approved drivers are included in the official forecast. Proposed drivers are scenario-only.
-      Locked forecasts are immutable. Phase 7 actuals and variance consume locked forecast versions.
+      Locked forecasts are immutable and feed the actuals and variance views in Track. Waterfall and Planning Advisor are available in Track.
     </p>
   );
 }

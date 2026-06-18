@@ -33,7 +33,7 @@ export default async function OnboardingPage() {
           <button className="button" type="submit">Create organisation</button>
         </form>
         <p className="small-note">
-          Phase 1.1 creates only the tenant, roles, membership and audit event. Planning modules remain placeholders until later phases.
+          Onboarding creates only the tenant, roles, membership and audit event. Planning views become available as you add data.
         </p>
       </section>
     </main>

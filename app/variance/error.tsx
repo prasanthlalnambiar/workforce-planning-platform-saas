@@ -2,24 +2,23 @@
 
 import Link from 'next/link';
 
-export default function VarianceError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  console.error(error);
-
+export default function VarianceModuleError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <main className="shell">
-      <section className="card warning-card">
-        <p className="eyebrow">Phase 7 variance analysis</p>
-        <h1>Variance data could not be loaded</h1>
+    <div className="stack">
+      <section className="card">
+        <p className="eyebrow">Module unavailable</p>
+        <h2>The variance module could not load</h2>
         <p>
-          The variance module could not read its governed data tables. Ask an administrator to confirm the
-          Phase 7 database migration has been applied, then retry.
+          This is a controlled module error, not an empty register. The variance data could not be read — most
+          often because the database migrations have not been applied to this environment yet. Empty
+          state is never used to hide a failure.
         </p>
-        {error.digest ? <p className="small-note">Error reference: {error.digest}</p> : null}
-        <div className="button-row">
-          <button className="button" type="button" onClick={() => reset()}>Retry</button>
+        <p className="small-note">Details: {error.message}</p>
+        <div className="split-row" style={{ marginTop: 18 }}>
+          <button className="button" type="button" onClick={() => reset()}>Try again</button>
           <Link className="button button-secondary button-link" href="/workspace">Back to workspace</Link>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

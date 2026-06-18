@@ -24,7 +24,7 @@ export default async function DimensionsPage() {
     <AppShell context={context}>
       <div className="stack">
         <PageHeader eyebrow="Shared foundation" title="Shared Dimensions" badge="Tenant scoped">
-          Foundation dimensions used across Layer 1 and Layer 2. Phase 1 keeps these simple and governed.
+          Foundation dimensions used across demand and forecast models. These are kept simple and governed.
         </PageHeader>
         <section className="grid-2">
           {data.map(({ table, label, rows }) => (

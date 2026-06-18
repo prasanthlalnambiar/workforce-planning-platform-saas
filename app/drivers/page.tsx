@@ -40,10 +40,10 @@ export default async function DriversPage() {
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Phase 5 driver governance" title="Driver Layer" badge="Phase 5">
+        <PageHeader eyebrow="Change drivers" title="Driver Layer" badge="Assumptions">
           Register, phase and govern the named drivers that explain movement away from the locked budget baseline.
           Only approved drivers feed the official forecast position. Proposed drivers feed scenarios only.
-          This module stops at the governed driver register: reforecast locks, actuals, variance and waterfall come in later phases.
+          This view stops at the governed change-driver register. Reforecast locks, actuals and variance are handled in Forecast & Budget and Track.
         </PageHeader>
 
         <section className="grid-4">
@@ -61,7 +61,7 @@ export default async function DriversPage() {
                 <h2>{text(previewBaseline.baseline_name)}</h2>
                 <p>
                   Deterministic view of the locked baseline plus approved drivers (official position) and plus proposed drivers (scenario).
-                  The governed reforecast and forecast locks are built in Phase 6.
+                  The governed reforecast and forecast locks are built in Forecast & Budget.
                 </p>
               </div>
             </div>

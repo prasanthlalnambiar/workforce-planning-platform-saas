@@ -21,8 +21,8 @@ export default async function CalculationOutputPage({ searchParams }: { searchPa
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Layer 1 output" title="Calculation output" badge="Phase 2">
-          Run and inspect the deterministic workload, FTE, supply gap and labour budget result. This is not an approval lock and does not feed Layer 2 yet.
+        <PageHeader eyebrow="Forecast output" title="Calculation output" badge="Demand">
+          Run and inspect the deterministic workload, FTE, supply gap and labour budget result. This is not an approval lock and does not feed the budget baseline yet.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />
         {data.plan ? <Layer1Subnav planId={data.plan.id} /> : <EmptyPlanState />}

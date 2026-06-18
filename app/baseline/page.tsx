@@ -19,13 +19,13 @@ export default async function BudgetBaselinePage() {
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Phase 4 budget governance" title="Budget Baseline" badge="Phase 4">
-          Convert a ready Layer 1 handoff into a fixed annual OPEX and labour budget reference. This module stops at the locked baseline. Drivers, reforecasting, actuals and variance come later.
+        <PageHeader eyebrow="Budget baseline" title="Budget Baseline" badge="Budget">
+          Convert a ready planning handoff into a fixed annual OPEX and labour budget reference. This view stops at the locked baseline. Change drivers, reforecasting, actuals and variance are handled in later steps.
         </PageHeader>
         <BaselineSubnav />
 
         <section className="grid-4">
-          <StatCard label="Ready Layer 1 handoffs" value={data.readyHandoffs.length} note="Eligible for baseline creation" />
+          <StatCard label="Ready planning handoffs" value={data.readyHandoffs.length} note="Eligible for baseline creation" />
           <StatCard label="Draft baselines" value={draftBaselines.length} note="Can still be phased and reviewed" />
           <StatCard label="Locked baselines" value={lockedBaselines.length} note="Immutable annual references" tone={activeBaseline ? 'green' : undefined} />
           <StatCard label="Snapshots" value={data.snapshots.length} note="Preserved lock evidence" />
@@ -36,7 +36,7 @@ export default async function BudgetBaselinePage() {
             <div>
               <p className="eyebrow">Annual reference</p>
               <h2>{activeBaseline ? text(activeBaseline.baseline_name) : 'No locked baseline yet'}</h2>
-              <p>{activeBaseline ? 'This is the current immutable budget reference for its plan and fiscal year.' : 'Create a draft baseline from a ready Layer 1 handoff or manually, then review and lock it.'}</p>
+              <p>{activeBaseline ? 'This is the current immutable budget reference for its plan and fiscal year.' : 'Create a draft baseline from a ready planning handoff or manually, then review and lock it.'}</p>
             </div>
             {activeBaseline ? <Link className="button button-link" href={`/baseline/${String(activeBaseline.id)}`}>View locked baseline</Link> : null}
           </div>
@@ -53,13 +53,13 @@ export default async function BudgetBaselinePage() {
         <section id="create" className="grid-2">
           <article className="card governance-action">
             <p className="eyebrow">Preferred path</p>
-            <h2>Create from Layer 1 handoff</h2>
-            <p>Only handoffs marked <strong>ready for Layer 2</strong> are available. Imported values come from the immutable handoff payload, not from recalculating Layer 1 inputs.</p>
+            <h2>Create from planning handoff</h2>
+            <p>Only handoffs marked <strong>ready for baseline</strong> are available. Imported values come from the immutable handoff payload, not from recalculating demand inputs.</p>
             <form className="form-grid single" action={createBaselineFromHandoffAction}>
               <label className="field">
                 <span>Ready handoff</span>
                 <select name="handoff_id" required disabled={!userCanCreate || data.readyHandoffs.length === 0}>
-                  <option value="">Select a ready Layer 1 handoff</option>
+                  <option value="">Select a ready planning handoff</option>
                   {data.readyHandoffs.map((handoff) => (
                     <option key={String(handoff.id)} value={String(handoff.id)}>
                       {firstPlanName(data.plans, handoff.plan_id)} · {firstFiscalYearLabel(data.fiscalYears, handoff.fiscal_year_id)} · confidence {num(handoff.confidence_score, 0)}%
@@ -89,7 +89,7 @@ export default async function BudgetBaselinePage() {
           <article className="card governance-action">
             <p className="eyebrow">Alternative path</p>
             <h2>Create manual baseline</h2>
-            <p>Use this when a Finance-approved annual budget exists without a governed Layer 1 handoff. Manual baselines remain clearly labelled.</p>
+            <p>Use this when a Finance-approved annual budget exists without a governed planning handoff. Manual baselines remain clearly labelled.</p>
             <form className="form-grid" action={createManualBaselineAction}>
               <label className="field wide"><span>Baseline name</span><input name="baseline_name" required placeholder="FY2027 Manual OPEX Baseline" /></label>
               <label className="field"><span>Plan</span><select name="plan_id" required disabled={!userCanCreate}>{data.plans.map((plan) => <option key={String(plan.id)} value={String(plan.id)}>{text(plan.plan_name)}</option>)}</select></label>

@@ -28,10 +28,10 @@ export default async function ActualsPage() {
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Phase 7 actuals ingestion" title="Actuals" badge="Phase 7">
+        <PageHeader eyebrow="Actuals" title="Actuals" badge="Track">
           Actual results are loaded against a locked budget baseline, validated against existing planning periods,
           and posted as immutable versions. Corrections supersede; they never edit posted numbers.
-          Waterfall reporting and AI commentary are future phases.
+          Waterfall and Planning Advisor are available in Track.
         </PageHeader>
 
         <section className="grid-4">

@@ -23,7 +23,7 @@ const layer1Links = [
 export function Layer1Subnav({ planId }: { planId?: string }) {
   const suffix = planId ? `?planId=${planId}` : '';
   return (
-    <nav className="subnav" aria-label="Layer 1 navigation">
+    <nav className="subnav" aria-label="Demand inputs navigation">
       {layer1Links.map(([label, href]) => <Link key={href} href={`${href}${suffix}`}>{label}</Link>)}
     </nav>
   );
@@ -31,13 +31,13 @@ export function Layer1Subnav({ planId }: { planId?: string }) {
 
 export function PlanSelector({ plans, selectedPlanIdValue }: { plans: Layer1SelectedPlan[]; selectedPlanIdValue?: string }) {
   if (plans.length === 0) {
-    return <p className="small-note">Create a plan in the Workspace before building a Layer 1 model.</p>;
+    return <p className="small-note">Create a plan on Home before building a demand model.</p>;
   }
   return (
     <form className="plan-selector" action="/layer1">
       <label className="field compact-field">
         <span>Selected plan</span>
-        <select name="planId" defaultValue={selectedPlanIdValue} aria-label="Selected Layer 1 plan">
+        <select name="planId" defaultValue={selectedPlanIdValue} aria-label="Selected plan">
           {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}
         </select>
       </label>
@@ -50,7 +50,7 @@ export function EmptyPlanState() {
   return (
     <section className="card placeholder">
       <h2>No plan selected</h2>
-      <p>Layer 1 records belong to a tenant-scoped plan. Create a workspace plan first, then return here to build the demand-to-budget model.</p>
+      <p>These records belong to a tenant-scoped plan. Create a plan on Home first, then return here to build the demand-to-budget model.</p>
       <Link className="button button-link" href="/workspace">Go to Workspace</Link>
     </section>
   );
