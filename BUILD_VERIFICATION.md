@@ -48,6 +48,13 @@ Collecting build traces ...
 
 A local macOS SWC code-signing warning may appear on some machines. That warning is not a failure if the build fully exits successfully.
 
+
+## External build timeout fix
+
+The production build is intentionally separated from TypeScript and ESLint validation. The quality gate runs `npm run typecheck` and `npm run lint` before `npm run build`; Next's duplicate internal validation is disabled in `next.config.mjs` to avoid external build timeouts during the integrated `Linting and checking validity of types ...` stage.
+
+The app also forces the root layout, root redirect page and login page to dynamic Node.js rendering so build-time page data collection does not execute runtime-adjacent auth/login paths. Protected pages remain dynamic as well.
+
 ## ZIP verification
 
 External ZIPs should exclude generated files and secrets:

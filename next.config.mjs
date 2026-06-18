@@ -7,6 +7,12 @@ const projectRoot = dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   typedRoutes: false,
   reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true
+  },
+  typescript: {
+    ignoreBuildErrors: true
+  },
   outputFileTracingRoot: projectRoot,
   outputFileTracingExcludes: {
     '/*': [

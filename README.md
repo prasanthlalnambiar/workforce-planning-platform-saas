@@ -214,6 +214,13 @@ Important: if one-off work is included, Phase 2 shows it inside the selected mod
 - Phase 4 stops at locked budget baseline; drivers and reforecasting are not implemented yet
 - Phase 4.1 adds proof and hardening only; no Phase 5 features are implemented
 
+
+## External build timeout fix
+
+The production build is intentionally separated from TypeScript and ESLint validation. The quality gate runs `npm run typecheck` and `npm run lint` before `npm run build`; Next's duplicate internal validation is disabled in `next.config.mjs` to avoid external build timeouts during the integrated `Linting and checking validity of types ...` stage.
+
+The app also forces the root layout, root redirect page and login page to dynamic Node.js rendering so build-time page data collection does not execute runtime-adjacent auth/login paths. Protected pages remain dynamic as well.
+
 ## Tech stack
 
 - Next.js
