@@ -19,8 +19,8 @@ export default async function Layer1DashboardPage({ searchParams }: { searchPara
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Layer 1 deterministic engine" title="Demand-to-budget cockpit" badge="Phase 2">
-          Convert messy demand, measured work and hidden internal effort into workload hours, required FTE, supply gap and labour budget outputs. No approval lock or Layer 2 handoff is built in this phase.
+        <PageHeader eyebrow="Demand inputs" title="Demand-to-budget cockpit" badge="Demand">
+          Convert messy demand, measured work and hidden internal effort into workload hours, required FTE, supply gap and labour budget outputs. Approval lock and baseline handoff are handled in later steps.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />
         {data.plan ? <Layer1Subnav planId={data.plan.id} /> : null}

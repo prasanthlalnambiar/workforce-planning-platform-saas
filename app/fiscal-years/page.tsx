@@ -22,7 +22,7 @@ export default async function FiscalYearsPage() {
     <AppShell context={context}>
       <div className="stack">
         <PageHeader eyebrow="Planning calendar" title="Fiscal Years & Periods" badge="Monthly grain">
-          Creates the calendar foundation used by both Layer 1 demand models and Layer 2 forecast governance.
+          Creates the calendar foundation used by demand models and forecast governance.
         </PageHeader>
         <section className="card">
           <h2>Create fiscal year</h2>

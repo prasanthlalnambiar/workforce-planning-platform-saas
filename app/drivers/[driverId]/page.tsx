@@ -43,7 +43,7 @@ export default async function DriverDetailPage({ params }: { params: Promise<{ d
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Phase 5 driver governance" title={`${text(driver.driver_code)} · ${text(driver.driver_name)}`} badge="Phase 5">
+        <PageHeader eyebrow="Change drivers" title={`${text(driver.driver_code)} · ${text(driver.driver_name)}`} badge="Assumptions">
           {status === 'approved'
             ? 'This driver is approved and immutable. It feeds the official forecast position. Changes require the controlled supersede workflow.'
             : status === 'proposed'

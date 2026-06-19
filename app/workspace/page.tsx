@@ -4,44 +4,76 @@ import { Badge } from '../../components/ui/badge';
 import { PageHeader } from '../../components/ui/page-header';
 import { requireUserContext } from '../../lib/auth/session';
 import { listPlans } from '../../lib/repositories/plans';
+import { getCockpitSummary, type JobStatus } from '../../lib/repositories/cockpit-summary';
 import { hasPermission } from '../../lib/permissions/permissions';
+import Link from 'next/link';
 
 
 export const dynamic = 'force-dynamic';
-export default async function WorkspacePage() {
+export default async function HomePage() {
   const context = await requireUserContext();
-  const plans = await listPlans(context);
+  const [plans, summary] = await Promise.all([listPlans(context), getCockpitSummary(context)]);
   const canCreate = hasPermission(context.roles, 'workspace:create_plan');
+  const activePlan = plans[0];
 
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Phase 1 foundation" title="Workspace" badge="Tenant scoped">
-          Plans are scoped to the authenticated user&apos;s organisation. Future Layer 1 and Layer 2 records will hang from this workspace.
+        <PageHeader eyebrow="Planning cockpit" title="Home" badge="Tenant scoped">
+          Where you are in this planning cycle, what is complete, and your next action.
         </PageHeader>
-        <section className="grid-4">
-          <Metric label="Plans" value={plans.length} />
-          <Metric label="Roles" value={context.roles.length} />
-          <Metric label="Foundation" value="P1" />
-          <Metric label="AI" value="Off" />
-        </section>
+
+        {activePlan ? (
+          <p className="small-note">
+            {String(activePlan.plan_name)} · {context.email}
+          </p>
+        ) : null}
+
+        {summary.unavailable ? (
+          <section className="card">
+            <p className="eyebrow">Cockpit unavailable</p>
+            <h2>Status could not be loaded</h2>
+            <p>The planning records could not be read just now. This is a controlled state, not an empty plan. Try again shortly, or check that the database is reachable.</p>
+          </section>
+        ) : (
+          <>
+            <section className="card">
+              <div className="split-row">
+                <div><p className="eyebrow">Planning status</p><h2>Your plan at a glance</h2></div>
+              </div>
+              <div className="grid-4">
+                {summary.jobs.map((job) => (
+                  <Link key={job.job} href={job.href} className="metric metric-link">
+                    <span>{job.job}</span>
+                    <strong><StatusBadge status={job.status} /></strong>
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            {summary.nextAction ? (
+              <section className="card">
+                <div className="split-row">
+                  <div>
+                    <p className="eyebrow">Next action</p>
+                    <h2>{summary.nextAction.label}</h2>
+                  </div>
+                  <Link className="button button-link" href={summary.nextAction.href}>Go</Link>
+                </div>
+                {summary.advisorNote ? <p className="small-note">Planning Advisor: {summary.advisorNote}</p> : null}
+              </section>
+            ) : (
+              <section className="card">
+                <p className="eyebrow">Getting started</p>
+                <h2>No locked forecast yet</h2>
+                <p>Complete Inputs and Assumptions, then review Forecast &amp; Budget and lock a forecast before tracking variance.</p>
+              </section>
+            )}
+          </>
+        )}
+
         <section className="card">
-          <h2>Create plan</h2>
-          <p>Creates only the plan container. No calculator or forecasting logic is included in Phase 1.</p>
-          <form className="form-grid" action={createPlanAction}>
-            <label className="field">
-              <span>Plan name</span>
-              <input name="plan_name" required placeholder="FY2027 Operations Workforce Budget Plan" />
-            </label>
-            <label className="field wide">
-              <span>Description</span>
-              <textarea name="plan_description" placeholder="Short description of the planning workspace." />
-            </label>
-            <button className="button" disabled={!canCreate} type="submit">Create plan</button>
-          </form>
-        </section>
-        <section className="card">
-          <h2>Plan list</h2>
+          <h2>Plans</h2>
           <div className="table-wrap">
             <table>
               <thead><tr><th>Plan</th><th>Status</th><th>Type</th></tr></thead>
@@ -53,16 +85,33 @@ export default async function WorkspacePage() {
                     <td>{String(plan.plan_type)}</td>
                   </tr>
                 ))}
-                {plans.length === 0 ? <tr><td colSpan={3}>No plans yet.</td></tr> : null}
+                {plans.length === 0 ? <tr><td colSpan={3}>No plans yet. Create one below to begin.</td></tr> : null}
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="card">
+          <h2>Create a plan</h2>
+          <p>Creates the plan container that your demand inputs, assumptions, forecast and actuals hang from.</p>
+          <form className="form-grid" action={createPlanAction}>
+            <label className="field">
+              <span>Plan name</span>
+              <input name="plan_name" required placeholder="FY2027 Customer Operations Plan" />
+            </label>
+            <label className="field wide">
+              <span>Description</span>
+              <textarea name="plan_description" placeholder="Short description of this plan." />
+            </label>
+            <button className="button" disabled={!canCreate} type="submit">Create plan</button>
+          </form>
         </section>
       </div>
     </AppShell>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string | number }) {
-  return <article className="metric"><span>{label}</span><strong>{value}</strong></article>;
+function StatusBadge({ status }: { status: JobStatus }) {
+  const tone = status === 'Complete' ? 'green' : status === 'Current' || status === 'Needs review' ? 'warm' : 'neutral';
+  return <Badge tone={tone}>{status}</Badge>;
 }

@@ -53,7 +53,9 @@ test('Phase 4.1 migrations are ordered and cumulative from zero', () => {
     '008_phase5_driver_layer.sql',
     '009_phase6_reforecast_module.sql',
     '010_phase7_actuals_variance.sql',
-    '011_phase7_1_governance_uat_hardening.sql'
+    '011_phase7_1_governance_uat_hardening.sql',
+    '012_phase7_1_checksum_lifecycle_hardening.sql',
+    '013_phase7_read_grant_fix.sql'
   ]);
 });
 

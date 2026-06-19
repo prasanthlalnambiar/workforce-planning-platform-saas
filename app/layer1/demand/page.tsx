@@ -16,7 +16,7 @@ export default async function DemandInputsPage({ searchParams }: { searchParams?
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Layer 1 demand" title="Demand inputs" badge="Phase 2">
+        <PageHeader eyebrow="Demand inputs" title="Demand inputs" badge="Demand">
           Capture measured work where systems exist, and explicitly estimate hidden or internal work where tools do not capture the full workload.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />

@@ -44,7 +44,7 @@ export default async function VarianceDetailPage({ params }: { params: Promise<{
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Phase 7 variance analysis" title={`${text(report.report_code)} · ${text(report.report_name)}`} badge="Phase 7">
+        <PageHeader eyebrow="Variance" title={`${text(report.report_code)} · ${text(report.report_name)}`} badge="Track">
           {isLocked
             ? 'This variance report is locked and immutable, pinned to the actuals version and forecast lock version it was created with.'
             : status === 'superseded'

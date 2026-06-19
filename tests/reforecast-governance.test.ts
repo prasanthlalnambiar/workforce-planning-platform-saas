@@ -107,10 +107,13 @@ test('phase boundary: no waterfall, executive bridge or AI database objects (act
   }
 });
 
-test('phase boundary: waterfall and AI pages remain placeholders (future phases)', () => {
-  for (const file of ['app/waterfall/page.tsx', 'app/ai/page.tsx']) {
-    const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
-    assert.match(source, /PlaceholderPage/, `${file} must remain a placeholder — that module is a future phase`);
+test('phase boundary: the AI advisory page is read-only and declares it produces no official numbers', () => {
+  const source = readFileSync(new URL('../app/ai/page.tsx', import.meta.url), 'utf8');
+  // No longer a placeholder, but must remain advisory-only and never mutate.
+  assert.ok(!source.includes('PlaceholderPage'), 'the AI page is now a real Phase 9 module');
+  assert.match(source, /source of truth/, 'the advisor page states governed records remain authoritative');
+  for (const forbidden of ['.insert(', '.update(', '.delete(', '.rpc(']) {
+    assert.ok(!source.includes(forbidden), `AI page must not mutate (${forbidden})`);
   }
 });
 

@@ -1,30 +1,30 @@
-import Link from 'next/link';
+'use client';
 
-const navItems = [
-  ['Workspace', '/workspace', 'Phase 1'],
-  ['Fiscal Years', '/fiscal-years', 'Phase 1'],
-  ['Dimensions', '/dimensions', 'Phase 1'],
-  ['Layer 1 Demand Engine', '/layer1', 'Phase 2'],
-  ['Budget Baseline', '/baseline', 'Phase 4'],
-  ['Drivers', '/drivers', 'Phase 5'],
-  ['Reforecast', '/reforecasts', 'Phase 6'],
-  ['Actuals', '/actuals', 'Phase 7'],
-  ['Variance', '/variance', 'Phase 7'],
-  ['Waterfall', '/waterfall', 'Phase 8'],
-  ['AI Advisory', '/ai', 'Phase 9'],
-  ['Audit', '/audit', 'Phase 1'],
-  ['Settings', '/settings', 'Phase 1']
-] as const;
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { PRIMARY_NAV, UTILITY_NAV, tabForRoute } from '../../lib/navigation/planning-cockpit';
 
 export function Navigation() {
+  const pathname = usePathname() ?? '';
+  const activeTab = tabForRoute(pathname);
+
   return (
-    <nav className="nav" aria-label="Product navigation">
-      {navItems.map(([label, href, phase]) => (
-        <Link key={href} href={href}>
-          <span>{label}</span>
-          <small>{phase}</small>
-        </Link>
-      ))}
+    <nav className="nav" aria-label="Planning navigation">
+      <div className="nav-primary">
+        {PRIMARY_NAV.map(({ tab, href }) => (
+          <Link key={tab} href={href} aria-current={activeTab === tab ? 'page' : undefined} className={activeTab === tab ? 'nav-active' : undefined}>
+            <span>{tab}</span>
+          </Link>
+        ))}
+      </div>
+      <div className="nav-utility" aria-label="Utility navigation">
+        <p className="nav-utility-label">More</p>
+        {UTILITY_NAV.map(({ label, href }) => (
+          <Link key={label} href={href}>
+            <span>{label}</span>
+          </Link>
+        ))}
+      </div>
     </nav>
   );
 }

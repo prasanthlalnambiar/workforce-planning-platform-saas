@@ -1,4 +1,5 @@
 import { Navigation } from './navigation';
+import { Breadcrumbs } from './breadcrumbs';
 import type { UserContext } from '../../types/models';
 
 export function AppShell({ context, children }: { context: UserContext; children: React.ReactNode }) {
@@ -9,7 +10,7 @@ export function AppShell({ context, children }: { context: UserContext; children
           <div className="brand-mark">WP</div>
           <div>
             <strong>Workforce Planning</strong>
-            <span>Budget Governance Platform</span>
+            <span>Planning Cockpit</span>
           </div>
         </div>
         <Navigation />
@@ -24,7 +25,10 @@ export function AppShell({ context, children }: { context: UserContext; children
             <button className="button button-secondary" type="submit">Sign out</button>
           </form>
         </header>
-        <main className="content">{children}</main>
+        <main className="content">
+          <Breadcrumbs />
+          {children}
+        </main>
       </div>
     </div>
   );

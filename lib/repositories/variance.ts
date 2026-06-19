@@ -12,21 +12,15 @@ import {
 import { hasPermission, requirePermission } from '../permissions/permissions';
 import { createAdminClient } from '../supabase/admin';
 import { createClient } from '../supabase/server';
+import { maybe, rows } from './read-result';
 import type { Json } from '../../types/database';
 import type { UserContext } from '../../types/models';
 
 type JsonRecord = Record<string, unknown>;
-type QueryResult = { error: { message?: string } | null };
 
 function numberFrom(value: unknown, fallback = 0): number {
   const parsed = Number(value ?? fallback);
   return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function assertQuerySucceeded(result: QueryResult, label: string): void {
-  if (result.error) {
-    throw new Error(`${label} query failed: ${result.error.message ?? 'Unknown Supabase error'}`);
-  }
 }
 
 export function canReadVariance(context: UserContext): boolean {
@@ -58,18 +52,14 @@ async function loadVarianceInputs(context: UserContext, actualsBatchId: string, 
   const supabase = await createClient();
   const orgId = context.organisationId;
 
-  const batchRes = await supabase
+  const { data: batch } = await supabase
     .from('actuals_batches').select('*').eq('organisation_id', orgId).eq('id', actualsBatchId).maybeSingle();
-  assertQuerySucceeded(batchRes, 'Actuals batch');
-  const batch = batchRes.data;
   if (!batch) throw new Error('Actuals batch not found');
   const batchRecord = batch as JsonRecord;
   if (String(batchRecord.status) !== 'posted') throw new Error('Variance can only be calculated from posted actuals');
 
-  const reforecastRes = await supabase
+  const { data: reforecast } = await supabase
     .from('reforecasts').select('*').eq('organisation_id', orgId).eq('id', reforecastId).maybeSingle();
-  assertQuerySucceeded(reforecastRes, 'Reforecast comparator');
-  const reforecast = reforecastRes.data;
   if (!reforecast) throw new Error('Reforecast not found');
   const reforecastRecord = reforecast as JsonRecord;
   if (!['locked', 'superseded'].includes(String(reforecastRecord.status))) {
@@ -84,8 +74,7 @@ async function loadVarianceInputs(context: UserContext, actualsBatchId: string, 
 
   const baselineRes = await supabase
     .from('budget_baselines').select('*').eq('organisation_id', orgId).eq('id', String(batchRecord.baseline_id)).maybeSingle();
-  assertQuerySucceeded(baselineRes, 'Budget baseline');
-  const baseline = baselineRes.data;
+  const baseline = maybe<JsonRecord>('the baseline', baselineRes as never);
   if (!baseline) throw new Error('Budget baseline not found');
 
   const [actualLinesRes, forecastLinesRes, baselineLinesRes] = await Promise.all([
@@ -93,11 +82,8 @@ async function loadVarianceInputs(context: UserContext, actualsBatchId: string, 
     supabase.from('reforecast_lines').select('*').eq('organisation_id', orgId).eq('reforecast_id', reforecastId).order('period_number', { ascending: true }),
     supabase.from('budget_baseline_lines').select('*').eq('organisation_id', orgId).eq('budget_baseline_id', String(batchRecord.baseline_id)).order('period_start', { ascending: true })
   ]);
-  assertQuerySucceeded(actualLinesRes, 'Actuals lines');
-  assertQuerySucceeded(forecastLinesRes, 'Reforecast lines');
-  assertQuerySucceeded(baselineLinesRes, 'Baseline lines');
 
-  const actualLines: ActualsLineDraft[] = ((actualLinesRes.data ?? []) as JsonRecord[]).map((line) => ({
+  const actualLines: ActualsLineDraft[] = rows<JsonRecord>('the posted actuals lines', actualLinesRes as never).map((line) => ({
     planningPeriodId: String(line.planning_period_id),
     periodNumber: numberFrom(line.period_number),
     periodStart: String(line.period_start),
@@ -108,21 +94,21 @@ async function loadVarianceInputs(context: UserContext, actualsBatchId: string, 
     sourceRowReference: line.source_row_reference ? String(line.source_row_reference) : null
   }));
 
-  const forecastLines: ComparatorLine[] = ((forecastLinesRes.data ?? []) as JsonRecord[]).map((line) => ({
+  const forecastLines: ComparatorLine[] = rows<JsonRecord>('the pinned forecast lines', forecastLinesRes as never).map((line) => ({
     planningPeriodId: String(line.period_id),
     cost: numberFrom(line.forecast_budget_amount),
     fte: numberFrom(line.forecast_required_fte),
     workloadHours: numberFrom(line.forecast_workload_hours)
   }));
 
-  const baselineLines: ComparatorLine[] = ((baselineLinesRes.data ?? []) as JsonRecord[]).map((line) => ({
+  const baselineLines: ComparatorLine[] = rows<JsonRecord>('the locked baseline lines', baselineLinesRes as never).map((line) => ({
     planningPeriodId: String(line.period_id),
     cost: numberFrom(line.budget_amount),
     fte: numberFrom(line.required_fte),
     workloadHours: numberFrom(line.workload_hours)
   }));
 
-  return { batch: batchRecord, reforecast: reforecastRecord, baseline: baseline as JsonRecord, actualLines, forecastLines, baselineLines };
+  return { batch: batchRecord, reforecast: reforecastRecord, baseline, actualLines, forecastLines, baselineLines };
 }
 
 function linePayloads(lines: VarianceLineDraft[]): Json {
@@ -188,10 +174,8 @@ export async function createVarianceReport(
 export async function recalculateVarianceReport(context: UserContext, reportId: string, reason: string): Promise<void> {
   requirePermission(context.roles, 'variance:write');
   const supabase = await createClient();
-  const reportRes = await supabase
+  const { data: report } = await supabase
     .from('variance_reports').select('*').eq('organisation_id', context.organisationId).eq('id', reportId).maybeSingle();
-  assertQuerySucceeded(reportRes, 'Variance report');
-  const report = reportRes.data;
   if (!report) throw new Error('Variance report not found');
   const record = report as JsonRecord;
   if (String(record.status) !== 'draft') throw new Error('Only draft variance reports can be recalculated');
@@ -220,18 +204,14 @@ export async function lockVarianceReport(context: UserContext, reportId: string,
   requirePermission(context.roles, 'variance:lock');
   const supabase = await createClient();
   const orgId = context.organisationId;
-  const reportRes = await supabase
+  const { data: report } = await supabase
     .from('variance_reports').select('*').eq('organisation_id', orgId).eq('id', reportId).maybeSingle();
-  assertQuerySucceeded(reportRes, 'Variance report');
-  const report = reportRes.data;
   if (!report) throw new Error('Variance report not found');
   const record = report as JsonRecord;
   if (String(record.status) !== 'draft') throw new Error('Only draft variance reports can be locked');
 
-  const storedLinesRes = await supabase
+  const { data: storedLines } = await supabase
     .from('variance_lines').select('*').eq('organisation_id', orgId).eq('variance_report_id', reportId).order('period_number', { ascending: true });
-  assertQuerySucceeded(storedLinesRes, 'Variance lines');
-  const storedLines = storedLinesRes.data;
 
   const lines: VarianceLineDraft[] = ((storedLines ?? []) as JsonRecord[]).map((line) => ({
     planningPeriodId: String(line.planning_period_id),
@@ -260,7 +240,9 @@ export async function lockVarianceReport(context: UserContext, reportId: string,
   const checksum = computeVarianceChecksum(lines, {
     comparatorLockVersionId: String(record.comparator_lock_version_id),
     comparatorChecksum: String(record.comparator_checksum),
-    actualsChecksum: String(record.actuals_checksum)
+    baselineChecksum: record.baseline_checksum ? String(record.baseline_checksum) : null,
+    actualsChecksum: String(record.actuals_checksum),
+    actualsVersionNumber: numberFrom(record.actuals_version_number, 1)
   });
 
   const admin = createAdminClient();
@@ -308,16 +290,11 @@ export async function getVarianceDashboard(context: UserContext): Promise<Varian
     supabase.from('variance_reports').select('*').eq('organisation_id', orgId).order('created_at', { ascending: false }),
     supabase.from('variance_lines').select('*').eq('organisation_id', orgId)
   ]);
-  assertQuerySucceeded(plansRes, 'Plans');
-  assertQuerySucceeded(fiscalYearsRes, 'Fiscal years');
-  assertQuerySucceeded(batchesRes, 'Posted actuals batches');
-  assertQuerySucceeded(reforecastsRes, 'Locked reforecasts');
-  assertQuerySucceeded(reportsRes, 'Variance reports');
-  assertQuerySucceeded(linesRes, 'Variance lines');
 
-  const allLines = (linesRes.data ?? []) as JsonRecord[];
+  const allLines = rows<JsonRecord>('variance lines', linesRes as never);
+  const allReports = rows<JsonRecord>('the variance register', reportsRes as never);
   const totalsByReport = new Map<string, VarianceTotals>();
-  for (const report of (reportsRes.data ?? []) as JsonRecord[]) {
+  for (const report of allReports) {
     const reportLines = allLines
       .filter((line) => String(line.variance_report_id) === String(report.id))
       .map((line) => ({
@@ -347,11 +324,11 @@ export async function getVarianceDashboard(context: UserContext): Promise<Varian
   }
 
   return {
-    plans: (plansRes.data ?? []) as JsonRecord[],
-    fiscalYears: (fiscalYearsRes.data ?? []) as JsonRecord[],
-    postedBatches: (batchesRes.data ?? []) as JsonRecord[],
-    lockedReforecasts: (reforecastsRes.data ?? []) as JsonRecord[],
-    reports: (reportsRes.data ?? []) as JsonRecord[],
+    plans: rows<JsonRecord>('plans', plansRes as never),
+    fiscalYears: rows<JsonRecord>('fiscal years', fiscalYearsRes as never),
+    postedBatches: rows<JsonRecord>('posted actuals batches', batchesRes as never),
+    lockedReforecasts: rows<JsonRecord>('locked forecasts', reforecastsRes as never),
+    reports: allReports,
     totalsByReport
   };
 }
@@ -374,12 +351,11 @@ export async function getVarianceDetail(context: UserContext, reportId: string):
 
   const reportRes = await supabase
     .from('variance_reports').select('*').eq('organisation_id', orgId).eq('id', reportId).maybeSingle();
-  assertQuerySucceeded(reportRes, 'Variance report');
-  const report = reportRes.data;
+  const report = maybe<JsonRecord>('this variance report', reportRes as never);
   if (!report) {
     return { report: null, lines: [], totals: null, batch: null, reforecast: null, baseline: null, auditEvents: [], supersededBy: null };
   }
-  const record = report as JsonRecord;
+  const record = report;
 
   const [linesRes, batchRes, reforecastRes, baselineRes, auditRes] = await Promise.all([
     supabase.from('variance_lines').select('*').eq('organisation_id', orgId).eq('variance_report_id', reportId).order('period_number', { ascending: true }),
@@ -388,13 +364,8 @@ export async function getVarianceDetail(context: UserContext, reportId: string):
     supabase.from('budget_baselines').select('*').eq('organisation_id', orgId).eq('id', String(record.baseline_id)).maybeSingle(),
     supabase.from('audit_events').select('*').eq('organisation_id', orgId).eq('entity_type', 'variance_report').eq('entity_id', reportId).order('created_at', { ascending: false }).limit(50)
   ]);
-  assertQuerySucceeded(linesRes, 'Variance lines');
-  assertQuerySucceeded(batchRes, 'Variance actuals batch');
-  assertQuerySucceeded(reforecastRes, 'Variance reforecast');
-  assertQuerySucceeded(baselineRes, 'Variance baseline');
-  assertQuerySucceeded(auditRes, 'Variance audit events');
 
-  const lines = (linesRes.data ?? []) as JsonRecord[];
+  const lines = rows<JsonRecord>('the variance rows', linesRes as never);
   const totals = summariseVariance(lines.map((line) => ({
     planningPeriodId: String(line.planning_period_id),
     periodNumber: numberFrom(line.period_number),
@@ -421,19 +392,18 @@ export async function getVarianceDetail(context: UserContext, reportId: string):
 
   async function relatedReport(id: unknown): Promise<JsonRecord | null> {
     if (!id) return null;
-    const relatedRes = await supabase.from('variance_reports').select('*').eq('organisation_id', orgId).eq('id', String(id)).maybeSingle();
-    assertQuerySucceeded(relatedRes, 'Related variance report');
-    return (relatedRes.data as JsonRecord) ?? null;
+    const { data } = await supabase.from('variance_reports').select('*').eq('organisation_id', orgId).eq('id', String(id)).maybeSingle();
+    return (data as JsonRecord) ?? null;
   }
 
   return {
     report: record,
     lines,
     totals,
-    batch: (batchRes.data as JsonRecord) ?? null,
-    reforecast: (reforecastRes.data as JsonRecord) ?? null,
-    baseline: (baselineRes.data as JsonRecord) ?? null,
-    auditEvents: (auditRes.data ?? []) as JsonRecord[],
+    batch: maybe<JsonRecord>('the actuals batch', batchRes as never),
+    reforecast: maybe<JsonRecord>('the forecast', reforecastRes as never),
+    baseline: maybe<JsonRecord>('the baseline', baselineRes as never),
+    auditEvents: rows<JsonRecord>('the variance audit trail', auditRes as never),
     supersededBy: await relatedReport(record.superseded_by_variance_id)
   };
 }

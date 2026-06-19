@@ -55,6 +55,8 @@ export type Permission =
   | 'variance:write'
   | 'variance:lock'
   | 'variance:void'
+  | 'waterfall:read'
+  | 'ai:read'
   | 'integrations:manage'
   | 'ai:manage';
 

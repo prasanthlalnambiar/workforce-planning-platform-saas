@@ -208,10 +208,14 @@ test('the variance checksum embeds the pinned comparators: a different forecast 
     forecastLines: [comparator(1, 100000)],
     baselineLines: [comparator(1, 95000)]
   });
-  const pinsA = { comparatorLockVersionId: 'RFL-20270701-aaaa', comparatorChecksum: 'fc-checksum-a', actualsChecksum: 'act-checksum-1' };
-  const pinsB = { comparatorLockVersionId: 'RFL-20270801-bbbb', comparatorChecksum: 'fc-checksum-b', actualsChecksum: 'act-checksum-1' };
+  const pinsA = { comparatorLockVersionId: 'RFL-20270701-aaaa', comparatorChecksum: 'fc-checksum-a', baselineChecksum: 'bl-checksum-1', actualsChecksum: 'act-checksum-1', actualsVersionNumber: 1 };
+  const pinsB = { ...pinsA, comparatorLockVersionId: 'RFL-20270801-bbbb', comparatorChecksum: 'fc-checksum-b' };
   assert.equal(computeVarianceChecksum(lines, pinsA), computeVarianceChecksum(lines, pinsA));
   assert.notEqual(computeVarianceChecksum(lines, pinsA), computeVarianceChecksum(lines, pinsB));
+  // Governance traceability: the hash is explicitly tied to the baseline
+  // artifact and the actuals version, not only to copied line values.
+  assert.notEqual(computeVarianceChecksum(lines, pinsA), computeVarianceChecksum(lines, { ...pinsA, baselineChecksum: 'bl-checksum-2' }));
+  assert.notEqual(computeVarianceChecksum(lines, pinsA), computeVarianceChecksum(lines, { ...pinsA, actualsVersionNumber: 2 }));
 });
 
 test('a locked variance does not change when a newer forecast version exists: same pinned inputs, same result', () => {

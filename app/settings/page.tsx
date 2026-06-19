@@ -8,7 +8,7 @@ export default async function Page() {
   const context = await requireUserContext();
   return (
     <AppShell context={context}>
-      <PlaceholderPage eyebrow="Phase 1 placeholder" title="Settings" phase="Phase 1" body="Future tenant settings, user administration and governance controls. Basic route is reserved in Phase 1." />
+      <PlaceholderPage eyebrow="Settings" title="Settings" body="Tenant settings, user administration and governance controls. This area is reserved and will expand over time." />
     </AppShell>
   );
 }

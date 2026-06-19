@@ -283,7 +283,13 @@ export function summariseVariance(lines: VarianceLineDraft[]): VarianceTotals {
  */
 export function computeVarianceChecksum(
   lines: VarianceLineDraft[],
-  pins: { comparatorLockVersionId: string; comparatorChecksum: string; actualsChecksum: string }
+  pins: {
+    comparatorLockVersionId: string;
+    comparatorChecksum: string;
+    baselineChecksum: string | null;
+    actualsChecksum: string;
+    actualsVersionNumber: number;
+  }
 ): string {
   const canonical = [...lines]
     .sort((a, b) => a.periodNumber - b.periodNumber)
@@ -295,8 +301,11 @@ export function computeVarianceChecksum(
       line.workloadVarianceToForecast.toFixed(2), line.workloadVarianceToBaseline.toFixed(2)
     ].join('|'))
     .join('\n');
+  // The baseline checksum and actuals version number are part of the hash:
+  // the variance lock is explicitly tied to the baseline artifact and the
+  // exact actuals version, not only to copied line values.
   return createHash('sha256')
-    .update(`${pins.comparatorLockVersionId}|${pins.comparatorChecksum}|${pins.actualsChecksum}\n${canonical}`)
+    .update(`${pins.comparatorLockVersionId}|${pins.comparatorChecksum}|${pins.baselineChecksum ?? ''}|${pins.actualsChecksum}|${pins.actualsVersionNumber}\n${canonical}`)
     .digest('hex');
 }
 
