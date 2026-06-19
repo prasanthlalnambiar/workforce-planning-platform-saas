@@ -77,7 +77,9 @@ test('ai:read permission is granted to every role that can read the waterfall', 
 test('Phase 9 adds no migration and no AI database objects (advisory is read-only)', () => {
   const migrationsDir = new URL('../supabase/migrations/', import.meta.url);
   const files = readdirSync(migrationsDir);
-  assert.ok(!files.some((f) => /013|phase9|advisory|ai_/.test(f)), 'no Phase 9 migration was added');
+  // 013 (the Phase 7 read-grant fix) is permitted; it must add no advisory/AI
+  // object, which the per-file scan below verifies.
+  assert.ok(!files.some((f) => /phase9|advisory|ai_/.test(f)), 'no Phase 9/advisory migration was added');
   for (const file of files) {
     const sql = readFileSync(new URL(file, migrationsDir), 'utf8')
       .split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').toLowerCase();

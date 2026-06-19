@@ -52,11 +52,16 @@ test('advisory remains read-only (carried forward): no writes/RPC/admin client',
   }
 });
 
-test('UX 1.0 adds no migration', () => {
+test('UX 1.0 adds no migration of its own (013 is the separate Phase 7 read-grant fix)', () => {
   const migrationsDir = new URL('../supabase/migrations/', import.meta.url);
   const files = readdirSync(migrationsDir).filter((f) => f.endsWith('.sql'));
-  assert.equal(files.length, 12, 'still exactly 12 migrations — none added');
-  assert.ok(!files.some((f) => /013/.test(f)), 'no migration 013');
+  // 001-012 are the pre-existing engine/governance migrations; 013 is the
+  // authorized read-grant fix (grants authenticated SELECT on the Phase 7 read
+  // tables). The UX 1.0 presentation refactor itself still adds no migration.
+  assert.equal(files.length, 13, 'exactly 13 migrations: 001-012 plus the 013 read-grant fix');
+  const thirteen = files.filter((f) => /^013/.test(f));
+  assert.equal(thirteen.length, 1, 'exactly one 013 migration');
+  assert.match(thirteen[0], /read_grant|grant/, '013 is the read-grant fix, not a feature migration');
 });
 
 test('no pages/ directory exists (App Router preserved)', () => {
