@@ -25,7 +25,7 @@ export default async function CalculationOutputPage({ searchParams }: { searchPa
           Run and inspect the deterministic workload, FTE, supply gap and labour budget result. This is not an approval lock and does not feed the budget baseline yet.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />
-        {data.plan ? <Layer1Subnav planId={data.plan.id} /> : <EmptyPlanState />}
+        {data.plan ? <Layer1Subnav planId={data.plan.id} tab="Forecast & Budget" /> : <EmptyPlanState />}
         {data.plan ? (
           <>
             <section className="card cockpit-card">

@@ -18,13 +18,13 @@ export default async function AssumptionsPage({ searchParams }: { searchParams?:
   return (
     <AppShell context={context}>
       <div className="stack">
-        <PageHeader eyebrow="Capacity assumptions" title="Capacity and cost assumptions" badge="Demand">
+        <PageHeader eyebrow="Assumptions" title="Capacity and cost assumptions" badge="Assumptions">
           Define the monthly productive capacity per FTE, current supply and labour cost assumptions used by the deterministic engine.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />
-        {data.plan ? <Layer1Subnav planId={data.plan.id} /> : <EmptyPlanState />}
+        {data.plan ? <Layer1Subnav planId={data.plan.id} tab="Assumptions" /> : <EmptyPlanState />}
         {data.plan ? (
-          <section className="grid-2">
+          <section className="grid-2" id="cost">
             <article className="card">
               <h2>Edit assumptions</h2>
               <form className="form-grid" action={createLayer1AssumptionsAction}>

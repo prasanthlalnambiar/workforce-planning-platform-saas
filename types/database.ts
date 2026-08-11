@@ -149,6 +149,18 @@ export interface Database {
         Args: { target_organisation_id: string; target_actor_user_id: string; batch_payload: Json; line_payloads: Json; create_reason?: string | null };
         Returns: Json;
       };
+      import_input_source_version: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_plan_id: string; source_payload: Json; row_payloads: Json; import_reason?: string | null };
+        Returns: Json;
+      };
+      create_field_mapping_version: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_version_id: string; mapping_payload: Json; mapping_reason?: string | null };
+        Returns: Json;
+      };
+      register_custom_dimension: {
+        Args: { target_organisation_id: string; target_actor_user_id: string; target_plan_id: string; dimension_payload: Json; register_reason?: string | null };
+        Returns: Json;
+      };
       update_actuals_batch_draft: {
         Args: { target_organisation_id: string; target_actor_user_id: string; target_batch_id: string; batch_payload: Json; line_payloads: Json; update_reason?: string | null };
         Returns: Json;

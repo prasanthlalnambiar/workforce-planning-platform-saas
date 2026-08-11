@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Badge } from '../../../components/ui/badge';
+import { TAB_SUBNAV, type PrimaryTab } from '../../../lib/navigation/planning-cockpit';
 import type { Layer1SelectedPlan } from '../../../lib/repositories/layer1';
 
 export type Layer1SearchParams = Promise<{ planId?: string }> | undefined;
@@ -9,22 +10,27 @@ export async function selectedPlanId(searchParams: Layer1SearchParams): Promise<
   return params?.planId;
 }
 
-const layer1Links = [
-  ['Dashboard', '/layer1'],
-  ['Planning brief', '/layer1/brief'],
-  ['Sources', '/layer1/sources'],
-  ['Demand inputs', '/layer1/demand'],
-  ['Assumptions', '/layer1/assumptions'],
-  ['Output', '/layer1/output'],
-  ['Scenarios', '/layer1/scenarios'],
-  ['Review & handoff', '/layer1/review']
-] as const;
-
-export function Layer1Subnav({ planId }: { planId?: string }) {
+/**
+ * Per-tab step navigation. The old mixed Layer-1 subnav (Dashboard / Planning
+ * brief / Sources / Operational Demand Data / Demand inputs / Assumptions /
+ * Output / Scenarios / Review) is gone — it duplicated and contradicted the left
+ * nav. This renders only the STEPS within one job, from the single nav source of
+ * truth. Defaults to the Inputs job (its historical callers are Inputs pages).
+ */
+export function Layer1Subnav({ planId, tab = 'Inputs' }: { planId?: string; tab?: PrimaryTab }) {
   const suffix = planId ? `?planId=${planId}` : '';
+  const items = TAB_SUBNAV[tab];
   return (
-    <nav className="subnav" aria-label="Demand inputs navigation">
-      {layer1Links.map(([label, href]) => <Link key={href} href={`${href}${suffix}`}>{label}</Link>)}
+    <nav className="subnav" aria-label={`${tab} navigation`}>
+      {items.map((item) => {
+        const isAnchor = item.href.includes('#');
+        const href = isAnchor ? item.href : `${item.href}${suffix}`;
+        return (
+          <Link key={item.href} href={href}>
+            {item.label}{item.note ? <span className="subnav-note"> · {item.note}</span> : null}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

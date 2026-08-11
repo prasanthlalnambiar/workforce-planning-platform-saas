@@ -11,6 +11,7 @@ import { Badge } from '../../../components/ui/badge';
 import { requireUserContext } from '../../../lib/auth/session';
 import { canApproveLayer1, canLockLayer1, canSubmitLayer1 } from '../../../lib/layer1/governance';
 import { getLayer1GovernanceData } from '../../../lib/repositories/layer1';
+import { displayEventType, displayReason } from '../../../lib/display/audit-labels';
 import { EmptyPlanState, Layer1Subnav, PlanSelector, money, num, selectedPlanId, type Layer1SearchParams } from '../_components/layer1-shared';
 
 export const dynamic = 'force-dynamic';
@@ -71,7 +72,7 @@ export default async function Layer1ReviewPage({ searchParams }: { searchParams?
           Review the deterministic demand model, submit it for approval, lock an immutable version and prepare a governed handoff for budget baseline setup.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />
-        {data.plan ? <Layer1Subnav planId={data.plan.id} /> : <EmptyPlanState />}
+        {data.plan ? <Layer1Subnav planId={data.plan.id} tab="Forecast & Budget" /> : <EmptyPlanState />}
         {data.plan ? (
           <>
             <section className="card governance-hero">
@@ -211,7 +212,7 @@ export default async function Layer1ReviewPage({ searchParams }: { searchParams?
             <section className="card">
               <h2>Demand model audit trail</h2>
               <div className="timeline-list">
-                {data.auditEvents.map((event) => <article key={String(event.id)}><strong>{String(event.event_type)}</strong><span>{displayDate(event.created_at)} · {String(event.reason ?? 'No reason supplied')}</span></article>)}
+                {data.auditEvents.map((event) => <article key={String(event.id)}><strong>{displayEventType(String(event.event_type))}</strong><span>{displayDate(event.created_at)} · {displayReason(event.reason as string | null)}</span></article>)}
                 {data.auditEvents.length === 0 ? <p>No demand model audit events yet.</p> : null}
               </div>
             </section>

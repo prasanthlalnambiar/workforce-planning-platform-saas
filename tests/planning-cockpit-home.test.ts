@@ -58,7 +58,7 @@ test('UX 1.0 adds no migration of its own (013 is the separate Phase 7 read-gran
   // 001-012 are the pre-existing engine/governance migrations; 013 is the
   // authorized read-grant fix (grants authenticated SELECT on the Phase 7 read
   // tables). The UX 1.0 presentation refactor itself still adds no migration.
-  assert.equal(files.length, 13, 'exactly 13 migrations: 001-012 plus the 013 read-grant fix');
+  assert.equal(files.length, 14, 'exactly 14 migrations: 001-012, the 013 read-grant fix, and the 014 WP-2 input foundation');
   const thirteen = files.filter((f) => /^013/.test(f));
   assert.equal(thirteen.length, 1, 'exactly one 013 migration');
   assert.match(thirteen[0], /read_grant|grant/, '013 is the read-grant fix, not a feature migration');

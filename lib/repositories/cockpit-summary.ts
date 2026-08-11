@@ -51,7 +51,8 @@ export async function getCockpitSummary(context: UserContext): Promise<CockpitSu
     const [
       plansRes, demandRes, assumptionsRes, driversRes,
       baselineLockedRes, forecastOutputRes, reforecastLockedRes,
-      actualsAnyRes, actualsPostedRes, varianceLockedRes
+      actualsAnyRes, actualsPostedRes, varianceLockedRes,
+      inputSourceRes, acceptedMappingRes
     ] = await Promise.all([
       supabase.from('plans').select('id').eq('organisation_id', orgId).limit(1),
       // Inputs signal: any demand/source input exists.
@@ -66,7 +67,11 @@ export async function getCockpitSummary(context: UserContext): Promise<CockpitSu
       // Track signals.
       supabase.from('actuals_batches').select('id').eq('organisation_id', orgId).limit(1),
       supabase.from('actuals_batches').select('id').eq('organisation_id', orgId).eq('status', 'posted').limit(1),
-      supabase.from('variance_reports').select('id').eq('organisation_id', orgId).in('status', ['locked', 'superseded']).limit(1)
+      supabase.from('variance_reports').select('id').eq('organisation_id', orgId).in('status', ['locked', 'superseded']).limit(1),
+      // Flexible-input signals (WP-2) — used for guidance only. These do NOT feed
+      // any official calculation; they just help Home point to the next step.
+      supabase.from('input_sources').select('id, current_version_id').eq('organisation_id', orgId).order('created_at', { ascending: false }).limit(1),
+      supabase.from('field_mapping_versions').select('id').eq('organisation_id', orgId).eq('mapping_status', 'accepted').limit(1)
     ]);
 
     const has = (res: unknown, label: string) => rows<JsonRecord>(label, res as never).length > 0;
@@ -81,10 +86,16 @@ export async function getCockpitSummary(context: UserContext): Promise<CockpitSu
     const hasAnyActuals = has(actualsAnyRes, 'actuals');
     const hasPostedActuals = has(actualsPostedRes, 'posted actuals');
     const hasLockedVariance = has(varianceLockedRes, 'locked variance');
+    const hasInputSource = has(inputSourceRes, 'input sources');
+    const hasAcceptedMapping = has(acceptedMappingRes, 'accepted mapping');
+    // Deep-link target for the mapping step: the most recent source, if one exists.
+    const latestSourceRow = rows<JsonRecord>('latest input source', inputSourceRes as never)[0];
+    const latestSourceId = latestSourceRow ? String(latestSourceRow.id) : null;
 
-    // Inputs
+    // Inputs — a demand source (flexible import) or legacy manual demand counts.
     let inputs: JobStatus;
-    if (!hasDemand) inputs = 'Waiting';
+    if (!hasInputSource && !hasDemand) inputs = 'Waiting';
+    else if (hasInputSource && !hasAcceptedMapping) inputs = 'Current';
     else if (!hasForecastOutput) inputs = 'Current';
     else inputs = 'Complete';
 
@@ -107,21 +118,41 @@ export async function getCockpitSummary(context: UserContext): Promise<CockpitSu
     else track = 'Waiting';
 
     const jobs: JobState[] = [
-      { job: 'Inputs', status: inputs, href: '/layer1' },
+      { job: 'Inputs', status: inputs, href: '/layer1/input-sources' },
       { job: 'Assumptions', status: assumptions, href: '/layer1/assumptions' },
-      { job: 'Forecast & Budget', status: forecast, href: '/baseline' },
-      { job: 'Track', status: track, href: '/actuals' }
+      { job: 'Forecast & Budget', status: forecast, href: '/layer1/output' },
+      { job: 'Track', status: track, href: '/track' }
     ];
 
-    // Single recommended next action: the earliest job that is not complete.
+    // Single recommended next action: walk the real planner ladder. The Inputs
+    // steps guide users through the flexible-input flow (source → mapping) rather
+    // than the old manual demand page. This is GUIDANCE ONLY — an accepted source
+    // does not feed any official calculation in this release.
     let nextAction: NextAction | null = null;
-    if (!hasPlan) nextAction = { label: 'Create a plan to begin', href: '/workspace' };
-    else if (inputs !== 'Complete') nextAction = { label: 'Enter demand inputs', href: '/layer1/demand' };
-    else if (assumptions !== 'Complete') nextAction = { label: 'Review assumptions', href: '/layer1/assumptions' };
-    else if (forecast !== 'Complete') nextAction = { label: 'Review and lock the forecast', href: '/baseline' };
-    else if (track === 'Waiting') nextAction = { label: 'Upload actuals in Track', href: '/actuals' };
-    else if (track === 'Current') nextAction = { label: 'Post actuals and create a variance report', href: '/variance' };
-    else nextAction = { label: 'Open Planning Advisor to explain the movement', href: '/ai' };
+    if (!hasPlan) {
+      nextAction = { label: 'Create a plan to begin', href: '/workspace' };
+    } else if (!hasInputSource && !hasDemand) {
+      nextAction = { label: 'Upload or paste demand data', href: '/layer1/input-sources' };
+    } else if (hasInputSource && !hasAcceptedMapping) {
+      nextAction = {
+        label: 'Map your demand columns',
+        href: latestSourceId ? `/layer1/input-sources/${latestSourceId}` : '/layer1/input-sources'
+      };
+    } else if (!hasAssumptions) {
+      nextAction = { label: 'Add assumptions', href: '/layer1/assumptions' };
+    } else if (!hasDrivers) {
+      nextAction = { label: 'Set change drivers', href: '/drivers' };
+    } else if (!hasForecastOutput) {
+      nextAction = { label: 'Run the forecast', href: '/layer1/output' };
+    } else if (!hasLockedBaseline && !hasLockedForecast) {
+      nextAction = { label: 'Review and lock the forecast', href: '/layer1/review' };
+    } else if (!hasAnyActuals) {
+      nextAction = { label: 'Track actuals', href: '/actuals' };
+    } else if (!hasPostedActuals || !hasLockedVariance) {
+      nextAction = { label: 'Create a variance report', href: '/variance' };
+    } else {
+      nextAction = { label: 'Open Planning Advisor to explain the movement', href: '/ai' };
+    }
 
     // Conservative advisor note: only assert the forecast-vs-baseline direction
     // when a locked forecast exists. Never invent precision.
@@ -139,10 +170,10 @@ function emptyUnavailable(): CockpitSummary {
   return {
     hasPlan: false,
     jobs: [
-      { job: 'Inputs', status: 'Waiting', href: '/layer1' },
+      { job: 'Inputs', status: 'Waiting', href: '/layer1/input-sources' },
       { job: 'Assumptions', status: 'Waiting', href: '/layer1/assumptions' },
-      { job: 'Forecast & Budget', status: 'Waiting', href: '/baseline' },
-      { job: 'Track', status: 'Waiting', href: '/actuals' }
+      { job: 'Forecast & Budget', status: 'Waiting', href: '/layer1/output' },
+      { job: 'Track', status: 'Waiting', href: '/track' }
     ],
     nextAction: null,
     advisorNote: null,

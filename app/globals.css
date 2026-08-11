@@ -66,6 +66,7 @@ th, td { padding: 13px 14px; border-bottom: 1px solid #ebe4da; text-align: left;
 .subnav { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 20px; background: rgba(255,253,249,.72); box-shadow: var(--shadow); }
 .subnav a { padding: 9px 12px; border: 1px solid transparent; border-radius: 999px; color: var(--muted); font-size: .9rem; font-weight: 800; text-decoration: none; }
 .subnav a:hover { border-color: var(--line); color: var(--navy); background: #fff; }
+.subnav-note { font-size: .72rem; font-weight: 700; opacity: .6; text-transform: uppercase; letter-spacing: .04em; }
 .plan-selector { display: flex; gap: 12px; align-items: flex-end; width: min(680px, 100%); padding: 16px; border: 1px solid var(--line); border-radius: 22px; background: rgba(255,253,249,.88); box-shadow: var(--shadow); }
 .compact-field { flex: 1; }
 .button-link { display: inline-flex; width: fit-content; text-decoration: none; }

@@ -34,7 +34,7 @@ export default async function ScenarioComparisonPage({ searchParams }: { searchP
           Compare deterministic demand, productivity, AI efficiency and finance-constrained views before any approval or baseline handoff exists.
         </PageHeader>
         <PlanSelector plans={data.plans} selectedPlanIdValue={data.plan?.id} />
-        {data.plan ? <Layer1Subnav planId={data.plan.id} /> : <EmptyPlanState />}
+        {data.plan ? <Layer1Subnav planId={data.plan.id} tab="Forecast & Budget" /> : <EmptyPlanState />}
         {data.plan ? (
           <>
             <section className="card cockpit-card">

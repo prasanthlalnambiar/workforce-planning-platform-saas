@@ -27,13 +27,17 @@ test('active-tab mapping covers every underlying route per the spec', () => {
     ['/layer1/sources', 'Inputs'],
     ['/layer1/demand', 'Inputs'],
     ['/layer1/assumptions', 'Assumptions'],
-    ['/layer1/scenarios', 'Assumptions'],
     ['/dimensions', 'Assumptions'],
     ['/drivers', 'Assumptions'],
+    ['/assumptions/workflow-mapping', 'Assumptions'],
+    ['/assumptions/location-vendor-split', 'Assumptions'],
     ['/layer1/output', 'Forecast & Budget'],
+    ['/forecast/visuals', 'Forecast & Budget'],
+    ['/layer1/scenarios', 'Forecast & Budget'],
     ['/layer1/review', 'Forecast & Budget'],
     ['/baseline', 'Forecast & Budget'],
     ['/reforecasts', 'Forecast & Budget'],
+    ['/track', 'Track'],
     ['/actuals', 'Track'],
     ['/variance', 'Track'],
     ['/waterfall', 'Track'],
@@ -81,10 +85,15 @@ test('existing routes remain accessible on disk (none deleted or moved)', () => 
   }
 });
 
-test('no new top-level job routes were introduced', () => {
-  for (const r of ['inputs', 'assumptions', 'forecast-budget', 'track']) {
+test('no new top-level tab-named landing routes were introduced', () => {
+  // These would be fake tab landings; the real landings are existing routes.
+  for (const r of ['inputs', 'forecast-budget']) {
     assert.ok(!existsSync(new URL(`../app/${r}/page.tsx`, import.meta.url)), `/${r} must NOT be created`);
   }
+  // /assumptions must not become a fake landing page; only its sub-steps exist.
+  assert.ok(!existsSync(new URL('../app/assumptions/page.tsx', import.meta.url)), '/assumptions landing must not exist');
+  // /track IS a real, approved read-only Track Overview landing.
+  assert.ok(existsSync(new URL('../app/track/page.tsx', import.meta.url)), '/track Overview exists');
 });
 
 test('the navigation component is built from the mapping and shows no phase labels', () => {
